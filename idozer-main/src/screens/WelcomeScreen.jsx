@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
-import { StyleSheet, View, Image, Text } from "react-native";
+import { StyleSheet, View, Dimensions, Text } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
 import * as SplashScreen from 'expo-splash-screen';
+import LottieView from 'lottie-react-native';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,11 +24,18 @@ const WelcomeScreen = () => {
   }
 
   return (
-    <LinearGradient colors={['#e0f7fa', '#80deea']} style={styles.container}>
+    <LinearGradient colors={['#1c92d2', '#f2fcfe']} style={styles.container}>
       <View style={styles.card}>
         <Text style={[styles.logoText, { fontFamily: 'Roboto_700Bold' }]}>idozer</Text>
         <View style={styles.imageContainer}>
-          <Image source={require("../../assets/kit2.png")} style={styles.image} resizeMode="contain"/>
+          <View style={styles.imageBorder}>
+            <LottieView
+              source={require("../../assets/welcome.json")}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
         </View>
         <View style={styles.textDiv}>
           <Text style={[styles.welcomeText, { fontFamily: 'Roboto_700Bold' }]}>¡Bienvenido!</Text>
@@ -40,6 +48,8 @@ const WelcomeScreen = () => {
   );
 };
 
+const { width } = Dimensions.get("window");
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -48,61 +58,69 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '90%',
-    padding: 30, // Aumentar padding
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    padding: width * 0.08,
+    borderRadius: 30,
+    backgroundColor: '#ffffff',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    elevation: 15,
     alignItems: "center",
   },
   logoText: {
-    fontSize: 40, // Aumentar tamaño de fuente
+    fontSize: width * 0.1,
     fontWeight: "700",
-    color: "#03A9F4",
-    marginBottom: 20,
+    color: "#1c92d2",
+    marginBottom: width * 0.05,
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 2,
+    letterSpacing: 6,
   },
   imageContainer: {
-    width: "80%", // Aumentar tamaño
+    width: "80%",
+    marginBottom: width * 0.08,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageBorder: {
+    width: "100%",
     aspectRatio: 1,
-    marginBottom: 30,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    borderRadius: width * 0.5,
+    borderWidth: 5,
+    borderColor: 'linear-gradient(135deg, #1c92d2, #f2fcfe)', // Degradado en el borde
+    overflow: 'hidden',
+    backgroundColor: '#ffffff', // Fondo blanco para un contraste limpio
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 10,
-    overflow: "hidden",
+    elevation: 18,
   },
-  image: {
+  lottie: {
     width: "100%",
     height: "100%",
   },
   textDiv: {
     width: "90%",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: width * 0.05,
   },
   welcomeText: {
-    fontSize: 32, // Aumentar tamaño de fuente
+    fontSize: width * 0.08,
     fontWeight: "700",
-    color: "#03A9F4",
-    marginBottom: 20,
+    color: "#1c92d2", // Color acorde al esquema del fondo
+    marginBottom: width * 0.05,
     textAlign: "center",
+    letterSpacing: 3,
   },
   descriptionText: {
-    fontSize: 18, // Aumentar tamaño de fuente
+    fontSize: width * 0.045,
     fontWeight: "400",
-    color: "#757575",
+    color: "#34495e", // Un gris oscuro para legibilidad
     textAlign: "center",
-    lineHeight: 28, // Aumentar line-height
-    paddingHorizontal: 20,
+    lineHeight: width * 0.07,
+    paddingHorizontal: width * 0.05,
   },
 });
 

@@ -1,9 +1,11 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet, Image } from "react-native";
+import { View, StyleSheet, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Button, Text, Provider as PaperProvider } from 'react-native-paper';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
+import LottieView from 'lottie-react-native';
+import { Ionicons, AntDesign } from '@expo/vector-icons'; // Usando iconos modernos de Ionicons y AntDesign
 
 // Evita que la pantalla de splash se oculte automáticamente
 SplashScreen.preventAutoHideAsync();
@@ -40,10 +42,11 @@ const LoginOrRegisterScreen = () => {
     <PaperProvider>
       <View style={styles.container}>
         <Text style={styles.logoText}>idozer</Text>
-        <Image
-          style={styles.image}
-          source={require("../../assets/medicos.png")}
-          resizeMode="contain"
+        <LottieView
+          source={require("../../assets/loginor.json")} // Asegúrate de que la animación esté en la ruta correcta
+          autoPlay
+          loop
+          style={styles.lottie}
         />
         <View style={styles.textDiv}>
           <Text style={styles.welcomeText}>Entrar o Registrarse</Text>
@@ -55,6 +58,7 @@ const LoginOrRegisterScreen = () => {
             onPress={navigateToLogin}
             style={styles.buttonSignUp}
             labelStyle={styles.buttonTextSignUp}
+            icon={() => <Ionicons name="log-in-outline" size={24} color="#03A9F4" />} // Icono moderno para Iniciar Sesión
           >
             INICIAR SESIÓN
           </Button>
@@ -64,6 +68,7 @@ const LoginOrRegisterScreen = () => {
             onPress={navigateToRegister}
             style={styles.buttonRegister}
             labelStyle={styles.buttonTextRegister}
+            icon={() => <AntDesign name="adduser" size={24} color="#FFFFFF" />} // Icono moderno para Registrarse
           >
             REGISTRARSE
           </Button>
@@ -73,83 +78,95 @@ const LoginOrRegisterScreen = () => {
   );
 };
 
+const { width, height } = Dimensions.get("window");
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 50,
-    backgroundColor: '#F0F4F8', // Color de fondo más claro y moderno
+    paddingVertical: height * 0.05,
+    backgroundColor: '#e0eafc', // Fondo multicolor claro
+    background: 'linear-gradient(315deg, #e0eafc 0%, #cfdef3 74%, #80deea 100%)', // Degradado multicolor suave
   },
   logoText: {
-    fontSize: 44, // Tamaño de fuente más grande
+    fontSize: width * 0.12, // Tamaño de fuente dinámico
     fontWeight: "700",
-    color: "#03A9F4", // Color más vibrante
-    marginBottom: 30, // Mayor margen inferior
+    color: "#03A9F4", // Color azul vibrante para el logo
+    marginBottom: height * 0.02, // Margen inferior dinámico
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 3, // Mayor espaciado de letras
+    letterSpacing: 6, // Mayor espaciado entre letras
   },
-  image: {
-    width: "80%",
-    height: "35%", // Ajuste del tamaño de la imagen
-    marginTop: 30,
-    borderRadius: 20, // Bordes más suaves
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 }, // Mayor desplazamiento de la sombra
-    shadowOpacity: 0.15,
-    shadowRadius: 15, // Mayor radio de sombra
-    elevation: 12,
+  lottie: {
+    width: width * 0.6, // Ancho dinámico para la animación
+    height: width * 0.6, // Mantener proporción cuadrada
+    marginBottom: height * 0.03, // Margen inferior dinámico
+    backgroundColor: '#f2fcfe', // Fondo claro para la animación
+    borderRadius: 20, // Bordes redondeados
+    overflow: 'hidden',
+    elevation: 10, // Sombra para dar profundidad
   },
   textDiv: {
-    width: "85%", // Más ancho
-    marginTop: 30,
+    width: "85%", // Ajuste de ancho
+    marginTop: height * 0.03, // Margen superior dinámico
     alignItems: "center",
   },
   welcomeText: {
-    fontSize: 40, // Tamaño de fuente grande
+    fontSize: width * 0.08, // Fuente dinámica basada en el ancho
     fontWeight: "700",
-    color: "#03A9F4", // Color más vibrante
+    color: "#34495e", // Color gris oscuro para buen contraste
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: height * 0.02, // Margen inferior dinámico
   },
   buttonContainer: {
     alignItems: "center",
-    width: "85%", // Más ancho
-    marginTop: 40,
+    width: "85%", // Ancho responsivo
+    marginTop: height * 0.04, // Margen superior dinámico
   },
   buttonSignUp: {
     width: "100%",
-    paddingVertical: 15, // Mayor padding vertical
+    paddingVertical: height * 0.02, // Padding vertical dinámico
     borderRadius: 50,
-    borderColor: "#03A9F4", // Color más vibrante
+    borderColor: "#03A9F4", // Borde azul vibrante para contraste
     borderWidth: 2,
-    marginBottom: 20,
+    marginBottom: height * 0.02, // Margen inferior dinámico
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E0F7FA", // Color de fondo suave
+    backgroundColor: "#e0f7fa", // Fondo suave y claro
+    elevation: 5, // Añadir sombra al botón
   },
   buttonTextSignUp: {
-    color: "#03A9F4", // Color más vibrante
-    fontSize: 20, // Tamaño de fuente más grande
+    color: "#03A9F4", // Texto azul vibrante para contraste
+    fontSize: width * 0.045, // Fuente un poco más pequeña para mejorar la legibilidad
     fontWeight: "700",
+    letterSpacing: 1.5, // Espaciado entre letras para un efecto más moderno
+    textTransform: "uppercase", // Texto en mayúsculas para un mayor impacto visual
+    textShadowColor: 'rgba(0, 0, 0, 0.25)', // Sombra suave para texto
+    textShadowOffset: { width: 1, height: 1 }, // Offset para sombra
+    textShadowRadius: 1,
+    marginLeft: 30, // Espacio entre icono y texto
   },
   buttonRegister: {
     width: "100%",
-    paddingVertical: 15, // Mayor padding vertical
+    paddingVertical: height * 0.02, // Padding vertical dinámico
     borderRadius: 50,
-    backgroundColor: "#03A9F4", // Color más vibrante
+    backgroundColor: "#03A9F4", // Botón de registro en azul vibrante
     justifyContent: "center",
     alignItems: "center",
+    elevation: 5, // Añadir sombra al botón
   },
   buttonTextRegister: {
-    color: "#FFFFFF",
-    fontSize: 20, // Tamaño de fuente más grande
+    color: "#FFFFFF", // Texto blanco para contraste
+    fontSize: width * 0.045, // Fuente un poco más pequeña para mejorar la legibilidad
     fontWeight: "700",
+    letterSpacing: 1.5, // Espaciado entre letras para un efecto más moderno
+    textTransform: "uppercase", // Texto en mayúsculas para un mayor impacto visual
+    textShadowColor: 'rgba(0, 0, 0, 0.25)', // Sombra suave para texto
+    textShadowOffset: { width: 1, height: 1 }, // Offset para sombra
+    textShadowRadius: 1,
+    marginLeft: 30, // Espacio entre icono y texto
   },
 });
-
-
-
 
 export default LoginOrRegisterScreen;
