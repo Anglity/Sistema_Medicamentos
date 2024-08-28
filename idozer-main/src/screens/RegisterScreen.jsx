@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Image } from "react-native";
+import { StyleSheet, View, TouchableOpacity, Dimensions } from "react-native";
 import { TextInput, Button, RadioButton, Text, useTheme, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { auth } from '../services/firebase';
+
+const { width, height } = Dimensions.get("window");
 
 const RegisterScreen = () => {
   const [username, setUsername] = useState("");
@@ -24,7 +27,7 @@ const RegisterScreen = () => {
   };
 
   async function registerUser() {
-    setError(""); // Limpiar el error anterior, si lo hay
+    setError("");
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -39,41 +42,53 @@ const RegisterScreen = () => {
     <PaperProvider>
       <View style={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Image //source={require("../../IDOZER/assets/back_arrow.png")} 
-          style={styles.backButtonImage} />
+          <MaterialIcons name="arrow-back" size={24} color="#05B494" />
         </TouchableOpacity>
+
         <Text style={styles.headerText}>idozer</Text>
 
         <View style={styles.form}>
           <Text style={styles.titleText}>Crear Cuenta</Text>
 
-          <TextInput
-            label="Nombre de usuario"
-            value={username}
-            mode="outlined"
-            onChangeText={(text) => setUsername(text)}
-            style={styles.input}
-            theme={{ colors: { primary: colors.accent } }}
-          />
+          <View style={styles.inputContainer}>
+            <FontAwesome5 name="user" size={20} color="#666" style={styles.icon} />
+            <TextInput
+              label="Nombre de usuario"
+              value={username}
+              mode="flat"
+              onChangeText={(text) => setUsername(text)}
+              style={styles.input}
+              theme={{ colors: { primary: colors.accent, underlineColor: 'transparent' } }}
+              placeholderTextColor="#999"
+            />
+          </View>
 
-          <TextInput
-            label="Correo electrónico"
-            value={email}
-            mode="outlined"
-            onChangeText={(text) => setEmail(text)}
-            style={styles.input}
-            theme={{ colors: { primary: colors.accent } }}
-          />
+          <View style={styles.inputContainer}>
+            <FontAwesome5 name="envelope" size={20} color="#666" style={styles.icon} />
+            <TextInput
+              label="Correo electrónico"
+              value={email}
+              mode="flat"
+              onChangeText={(text) => setEmail(text)}
+              style={styles.input}
+              theme={{ colors: { primary: colors.accent, underlineColor: 'transparent' } }}
+              placeholderTextColor="#999"
+            />
+          </View>
 
-          <TextInput
-            label="Contraseña"
-            value={password}
-            mode="outlined"
-            secureTextEntry
-            onChangeText={(text) => setPassword(text)}
-            style={styles.input}
-            theme={{ colors: { primary: colors.accent } }}
-          />
+          <View style={styles.inputContainer}>
+            <FontAwesome5 name="lock" size={20} color="#666" style={styles.icon} />
+            <TextInput
+              label="Contraseña"
+              value={password}
+              mode="flat"
+              secureTextEntry
+              onChangeText={(text) => setPassword(text)}
+              style={styles.input}
+              theme={{ colors: { primary: colors.accent, underlineColor: 'transparent' } }}
+              placeholderTextColor="#999"
+            />
+          </View>
 
           <View style={styles.radioContainer}>
             <RadioButton
@@ -93,6 +108,7 @@ const RegisterScreen = () => {
             style={styles.buttonRegister}
             contentStyle={{ height: 50 }}
             labelStyle={styles.buttonText}
+            icon="account-plus"
           >
             Registrarse
           </Button>
@@ -114,49 +130,56 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    paddingHorizontal: 20,
+    backgroundColor: "#F0F4F8",
+    paddingHorizontal: width * 0.05,
   },
   backButton: {
     position: "absolute",
-    top: 40,
-    left: 20,
+    top: height * 0.05,
+    left: width * 0.05,
     zIndex: 1,
-  },
-  backButtonImage: {
-    width: 30,
-    height: 30,
   },
   form: {
     width: "100%",
     maxWidth: 400,
     backgroundColor: "#FFFFFF",
-    borderRadius: 15,
-    padding: 30,
+    borderRadius: 20,
+    padding: height * 0.04,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 25,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20, // Aumentar el redondeo de los bordes
+    marginBottom: height * 0.02,
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: width * 0.03,
+    elevation: 3, // Añadir un poco de sombra para darle profundidad
   },
   input: {
-    height: 55,
-    borderRadius: 10,
-    marginBottom: 20,
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    paddingHorizontal: 15,
-    fontSize: 16,
+    flex: 1,
+    height: height * 0.07,
+    backgroundColor: "transparent",
+    fontSize: width * 0.045,
     color: "#333",
+    paddingLeft: 10, // Añadir un poco de espacio entre el texto y el borde izquierdo
+  },
+  icon: {
+    marginRight: width * 0.03,
   },
   buttonRegister: {
-    marginTop: 25,
-    borderRadius: 25,
+    marginTop: height * 0.03,
+    borderRadius: 30,
     backgroundColor: "#05B494",
     justifyContent: "center",
     alignItems: "center",
-    height: 55,
+    height: height * 0.07,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -164,47 +187,47 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   headerText: {
-    fontSize: 36,
+    fontSize: width * 0.1,
     fontWeight: "bold",
     color: "#05B494",
-    marginBottom: 30,
+    marginBottom: height * 0.04,
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   titleText: {
-    fontSize: 26,
+    fontSize: width * 0.07,
     fontWeight: "700",
     color: "#343A40",
-    marginBottom: 20,
+    marginBottom: height * 0.03,
     textAlign: "center",
   },
   radioContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 15,
+    marginVertical: height * 0.02,
   },
   radioText: {
-    fontSize: 16,
+    fontSize: width * 0.045,
     color: "#6C757D",
     marginLeft: 5,
   },
   buttonText: {
-    fontSize: 18,
+    fontSize: width * 0.05,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
   error: {
     color: "red",
-    marginBottom: 15,
+    marginBottom: height * 0.02,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: width * 0.04,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 25,
+    marginTop: height * 0.03,
   },
   linkText: {
     color: "#05B494",

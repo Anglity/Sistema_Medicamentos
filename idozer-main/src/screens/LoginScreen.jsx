@@ -1,22 +1,12 @@
 import React, { useState } from "react";
-import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-} from "react-native";
-import { RadioButton, Provider as PaperProvider } from "react-native-paper";
+import { StyleSheet, View, TouchableOpacity, Dimensions } from "react-native";
+import { TextInput, RadioButton, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import {
-  BoldText,
-  BoldTextLink,
-  LightText,
-  MediumText,
-  RegularText,
-} from "../components/Text";
+import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
+import { Text } from 'react-native';
+
+const { width, height } = Dimensions.get("window");
 
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
@@ -31,20 +21,15 @@ const LoginScreen = () => {
   };
 
   const navigateToLoginOrRegister = () => {
-    navigation.navigate("LoginOrRegister");
+    navigation.navigate("LoginOrRegisterScreen");
   };
 
   async function loginUser() {
-    setError(""); // Limpiar el error anterior, si lo hay
+    setError("");
 
     try {
       const auth = getAuth();
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       navigation.navigate("Home");
     } catch (error) {
@@ -54,44 +39,49 @@ const LoginScreen = () => {
 
   return (
     <PaperProvider>
-      <View style={{ flex: 1, backgroundColor: "#E8F5E9" }}>
+      <View style={styles.container}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={navigateToLoginOrRegister}
         >
-          <Image
-            //source={require("../../IDOZER/assets/back_arrow.png")}
-            style={styles.backImage}
-          />
+          <Feather name="arrow-left" size={24} color="#05B494" />
         </TouchableOpacity>
-        <View style={styles.container}>
+        <View style={styles.innerContainer}>
+
+          {/* Título agregado */}
+          <Text style={styles.pageTitleText}>Registrase</Text> 
+          
           <Text style={styles.titleText}>idozer</Text>
 
           <View style={styles.form}>
-            <View style={{ marginTop: 20, marginBottom: 20 }}>
-              <Text style={styles.subtitleText}>Iniciar Sesión</Text>
-            </View>
-
             <View style={styles.formElement}>
               <Text style={styles.labelText}>Correo Electrónico</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                placeholder="Tu correo"
-                onChangeText={(text) => setEmail(text)}
-                autoCapitalize="none"
-              />
+              <View style={styles.inputContainer}>
+                <FontAwesome5 name="envelope" size={20} color="#05B494" style={styles.icon} />
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  placeholder="Tu correo"
+                  onChangeText={(text) => setEmail(text)}
+                  autoCapitalize="none"
+                  placeholderTextColor="#999"
+                />
+              </View>
             </View>
 
             <View style={styles.formElement}>
               <Text style={styles.labelText}>Contraseña</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                placeholder="************"
-                secureTextEntry
-                onChangeText={(text) => setPassword(text)}
-              />
+              <View style={styles.inputContainer}>
+                <Feather name="lock" size={20} color="#05B494" style={styles.icon} />
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  placeholder="************"
+                  secureTextEntry
+                  onChangeText={(text) => setPassword(text)}
+                  placeholderTextColor="#999"
+                />
+              </View>
             </View>
 
             <View style={styles.radioContainer}>
@@ -116,6 +106,7 @@ const LoginScreen = () => {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <TouchableOpacity style={styles.buttonRegister} onPress={loginUser}>
+              <MaterialIcons name="login" size={24} color="#FFFFFF" style={styles.buttonIcon} />
               <Text style={styles.buttonText}>Iniciar</Text>
             </TouchableOpacity>
 
@@ -135,76 +126,88 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
+    backgroundColor: "#E3F2FD",
+  },
+  innerContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E8F5E9",
+    paddingTop: height * 0.05,
   },
   backButton: {
     position: "absolute",
-    top: 40,
-    left: 20,
+    top: height * 0.05,
+    left: width * 0.05,
     zIndex: 1,
   },
-  backImage: {
-    width: 30,
-    height: 30,
-  },
   form: {
-    width: 340,
-    padding: 30,
+    width: width * 0.85,
+    padding: height * 0.03,
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 15,
+    elevation: 5,
   },
   formElement: {
-    marginBottom: 20,
+    marginBottom: height * 0.02,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 20,
+    marginBottom: height * 0.02,
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: width * 0.03,
+    elevation: 2,
   },
   input: {
-    borderColor: "#ccc",
-    borderWidth: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    width: "100%",
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: "#F9F9F9",
-    fontSize: 16,
+    flex: 1,
+    height: height * 0.07,
+    backgroundColor: "transparent",
+    fontSize: width * 0.045,
     color: "#333",
+    paddingLeft: 10,
+  },
+  icon: {
+    marginRight: width * 0.03,
   },
   buttonRegister: {
-    marginTop: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: height * 0.03,
     width: "100%",
-    height: 50,
-    borderRadius: 25,
+    height: height * 0.07,
+    borderRadius: height * 0.035,
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#05B494",
+    backgroundColor: "#03A9F4",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
     elevation: 8,
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: width * 0.05,
     fontWeight: "700",
+    marginLeft: 5,
+  },
+  buttonIcon: {
+    marginRight: 10,
   },
   error: {
     color: "red",
-    marginBottom: 15,
+    marginBottom: height * 0.015,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: width * 0.04,
   },
   radioContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 10,
+    marginVertical: height * 0.01,
   },
   radioGroup: {
     flexDirection: "row",
@@ -213,45 +216,45 @@ const styles = StyleSheet.create({
     marginLeft: -10,
   },
   radioText: {
-    fontSize: 14,
+    fontSize: width * 0.04,
     color: "#666",
     marginLeft: 5,
   },
   forgotPasswordText: {
-    color: "#05B494",
+    color: "#03A9F4",
     fontWeight: "bold",
   },
   titleText: {
-    fontSize: 40,
+    fontSize: width * 0.1,
     fontWeight: "700",
-    color: "#05B494",
-    marginBottom: 20,
+    color: "#03A9F4",
+    marginBottom: height * 0.02,
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
-  subtitleText: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#05B494",
-    marginVertical: 20,
+  pageTitleText: {
+    fontSize: width * 0.07,
+    fontWeight: "600",
+    color: "#03A9F4",
+    marginBottom: height * 0.02,
     textAlign: "center",
   },
   labelText: {
-    fontSize: 16,
+    fontSize: width * 0.045,
     fontWeight: "500",
     color: "#666",
-    marginBottom: 8,
+    marginBottom: height * 0.01,
   },
   linkText: {
-    color: "#05B494",
+    color: "#03A9F4",
     fontWeight: "bold",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
+    marginTop: height * 0.03,
   },
 });
 
