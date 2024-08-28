@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Dimensions } from "react-native";
+import { StyleSheet, View, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { TextInput, RadioButton, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
@@ -31,7 +31,17 @@ const LoginScreen = () => {
       const auth = getAuth();
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      navigation.navigate("Home");
+
+      if (user.emailVerified) {
+        navigation.navigate("Home");
+      } else {
+        Alert.alert(
+          "Correo No Verificado",
+          "Tu correo electrónico no ha sido verificado. Por favor, revisa tu bandeja de entrada y sigue las instrucciones para verificar tu correo.",
+          [{ text: "OK" }]
+        );
+        auth.signOut(); // Opcional: Cerrar sesión automáticamente si el correo no está verificado
+      }
     } catch (error) {
       setError(error.message);
     }
@@ -48,8 +58,7 @@ const LoginScreen = () => {
         </TouchableOpacity>
         <View style={styles.innerContainer}>
 
-          {/* Título agregado */}
-          <Text style={styles.pageTitleText}>Registrase</Text> 
+          <Text style={styles.pageTitleText}>Iniciar Sesión</Text> 
           
           <Text style={styles.titleText}>idozer</Text>
 

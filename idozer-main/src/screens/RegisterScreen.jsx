@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Dimensions } from "react-native";
+import { StyleSheet, View, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { TextInput, Button, RadioButton, Text, useTheme, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { auth } from '../services/firebase';
 
@@ -32,7 +32,40 @@ const RegisterScreen = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      navigation.navigate('Login');
+      
+      // Enviar correo de verificación
+      await sendEmailVerification(user);
+
+      // Mostrar mensaje de éxito
+      Alert.alert(
+        "Verificación de Correo",
+        "Te hemos enviado un correo para verificar tu dirección de correo electrónico. Por favor, verifica tu correo antes de iniciar sesión.",
+        [{ text: "OK", onPress: () => navigation.navigate('Login') }]
+      );
+
+    } catch (error) {
+      setError(error.message);
+    }
+  }
+
+  async function loginUser() {
+    setError("");
+
+    try {
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      if (user.emailVerified) {
+        navigation.navigate("Home");
+      } else {
+        Alert.alert(
+          "Correo No Verificado",
+          "Tu correo electrónico no ha sido verificado. Por favor, revisa tu bandeja de entrada y sigue las instrucciones para verificar tu correo.",
+          [{ text: "OK" }]
+        );
+        auth.signOut();
+      }
     } catch (error) {
       setError(error.message);
     }
@@ -156,11 +189,11 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 20, // Aumentar el redondeo de los bordes
+    borderRadius: 20,
     marginBottom: height * 0.02,
     backgroundColor: "#F9FAFB",
     paddingHorizontal: width * 0.03,
-    elevation: 3, // Añadir un poco de sombra para darle profundidad
+    elevation: 3,
   },
   input: {
     flex: 1,
@@ -168,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     fontSize: width * 0.045,
     color: "#333",
-    paddingLeft: 10, // Añadir un poco de espacio entre el texto y el borde izquierdo
+    paddingLeft: 10,
   },
   icon: {
     marginRight: width * 0.03,
