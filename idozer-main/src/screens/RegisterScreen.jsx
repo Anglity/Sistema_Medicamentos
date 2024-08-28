@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Dimensions, Alert } from "react-native";
-import { TextInput, Button, RadioButton, Text, useTheme, Provider as PaperProvider } from "react-native-paper";
+import { StyleSheet, View, TouchableOpacity, Dimensions, Alert, Keyboard } from "react-native";
+import { TextInput, Button, RadioButton, Text, ProgressBar, useTheme, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { ref, set } from "firebase/database";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
 
 const { width, height } = Dimensions.get("window");
 
@@ -12,8 +13,11 @@ const RegisterScreen = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);  
 
   const navigation = useNavigation();
   const { colors } = useTheme();
@@ -26,46 +30,63 @@ const RegisterScreen = () => {
     navigation.goBack();
   };
 
+  const calculatePasswordStrength = (password) => {
+    let strength = 0;
+    if (password.length >= 8) strength += 1;
+    if (/[A-Z]/.test(password)) strength += 1;
+    if (/[0-9]/.test(password)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+    return strength / 4;
+  };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    setPasswordStrength(calculatePasswordStrength(text));
+  };
+
+  const validatePassword = () => {
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return false;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError("La contraseña debe contener al menos una letra mayúscula.");
+      return false;
+    }
+    return true;
+  };
+
   async function registerUser() {
     setError("");
+
+    if (!validatePassword()) {
+      return;
+    }
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // Enviar correo de verificación
+
+      await set(ref(db, 'users/' + user.uid), {
+        username: username,
+        email: email,
+        uid: user.uid
+      });
+
       await sendEmailVerification(user);
 
-      // Mostrar mensaje de éxito
       Alert.alert(
         "Verificación de Correo",
         "Te hemos enviado un correo para verificar tu dirección de correo electrónico. Por favor, verifica tu correo antes de iniciar sesión.",
-        [{ text: "OK", onPress: () => navigation.navigate('Login') }]
+        [{ text: "OK", onPress: () => {
+          setUsername("");
+          setEmail("");
+          setPassword("");
+          setConfirmPassword("");
+          navigation.navigate('Happy');
+        }}]
       );
 
-    } catch (error) {
-      setError(error.message);
-    }
-  }
-
-  async function loginUser() {
-    setError("");
-
-    try {
-      const auth = getAuth();
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      if (user.emailVerified) {
-        navigation.navigate("Home");
-      } else {
-        Alert.alert(
-          "Correo No Verificado",
-          "Tu correo electrónico no ha sido verificado. Por favor, revisa tu bandeja de entrada y sigue las instrucciones para verificar tu correo.",
-          [{ text: "OK" }]
-        );
-        auth.signOut();
-      }
     } catch (error) {
       setError(error.message);
     }
@@ -75,7 +96,7 @@ const RegisterScreen = () => {
     <PaperProvider>
       <View style={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <MaterialIcons name="arrow-back" size={24} color="#05B494" />
+          <MaterialIcons name="arrow-back" size={24} color="#03A9F4" />
         </TouchableOpacity>
 
         <Text style={styles.headerText}>idozer</Text>
@@ -116,7 +137,39 @@ const RegisterScreen = () => {
               value={password}
               mode="flat"
               secureTextEntry
-              onChangeText={(text) => setPassword(text)}
+              onChangeText={handlePasswordChange}
+              onFocus={() => setIsPasswordFocused(true)}
+              onBlur={() => {
+                setIsPasswordFocused(false);
+                Keyboard.dismiss();
+              }}
+              style={styles.input}
+              theme={{ colors: { primary: colors.accent, underlineColor: 'transparent' } }}
+              placeholderTextColor="#999"
+            />
+          </View>
+
+          {isPasswordFocused && password.length > 0 && (
+            <View style={styles.passwordStrengthContainer}>
+              <ProgressBar
+                progress={passwordStrength}
+                color={colors.accent}
+                style={styles.progressBar}
+              />
+              <Text style={styles.passwordStrengthText}>
+                {passwordStrength === 1 ? "Contraseña Fuerte" : passwordStrength >= 0.5 ? "Contraseña Media" : "Contraseña Débil"}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.inputContainer}>
+            <FontAwesome5 name="lock" size={20} color="#666" style={styles.icon} />
+            <TextInput
+              label="Confirmar Contraseña"
+              value={confirmPassword}
+              mode="flat"
+              secureTextEntry
+              onChangeText={(text) => setConfirmPassword(text)}
               style={styles.input}
               theme={{ colors: { primary: colors.accent, underlineColor: 'transparent' } }}
               placeholderTextColor="#999"
@@ -161,39 +214,40 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#E3F2FD",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F0F4F8",
-    paddingHorizontal: width * 0.05,
+    paddingHorizontal: "5%",
   },
   backButton: {
     position: "absolute",
-    top: height * 0.05,
-    left: width * 0.05,
+    top: "5%",
+    left: "5%",
     zIndex: 1,
   },
   form: {
     width: "100%",
     maxWidth: 400,
+    paddingVertical: "5%",
+    paddingHorizontal: "7%",
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    padding: height * 0.04,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 25,
     elevation: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    alignItems: "center",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 20,
-    marginBottom: height * 0.02,
+    marginBottom: "4%",
     backgroundColor: "#F9FAFB",
-    paddingHorizontal: width * 0.03,
+    paddingHorizontal: "3%",
     elevation: 3,
+    width: "100%",
   },
   input: {
     flex: 1,
@@ -206,10 +260,15 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: width * 0.03,
   },
+  passwordStrengthContainer: {
+    width: '100%',
+    marginTop: height * 0.01,
+    marginBottom: height * 0.015,
+  },
   buttonRegister: {
-    marginTop: height * 0.03,
+    marginTop: "5%",
     borderRadius: 30,
-    backgroundColor: "#05B494",
+    backgroundColor: "#03A9F4",
     justifyContent: "center",
     alignItems: "center",
     height: height * 0.07,
@@ -218,12 +277,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 8,
+    width: "100%",
   },
   headerText: {
     fontSize: width * 0.1,
     fontWeight: "bold",
-    color: "#05B494",
-    marginBottom: height * 0.04,
+    color: "#03A9F4",
+    marginBottom: "5%",
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 2,
@@ -232,13 +292,13 @@ const styles = StyleSheet.create({
     fontSize: width * 0.07,
     fontWeight: "700",
     color: "#343A40",
-    marginBottom: height * 0.03,
+    marginBottom: "7%",
     textAlign: "center",
   },
   radioContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: height * 0.02,
+    marginVertical: "5%",
   },
   radioText: {
     fontSize: width * 0.045,
@@ -260,13 +320,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: height * 0.03,
+    marginTop: "7%",
   },
   linkText: {
-    color: "#05B494",
+    color: "#03A9F4",
     fontWeight: "bold",
     marginLeft: 5,
   },
+  passwordStrengthText: {
+    textAlign: "center",
+    fontSize: width * 0.04,
+    color: "#666",
+  },
+  progressBar: {
+    height: 5,
+    borderRadius: 5,
+  }
 });
 
 export default RegisterScreen;

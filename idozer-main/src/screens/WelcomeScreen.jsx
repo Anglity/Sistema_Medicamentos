@@ -48,7 +48,7 @@ const WelcomeScreen = () => {
   );
 };
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   card: {
-    width: '90%',
-    padding: width * 0.08,
+    width: '85%',
+    padding: height * 0.04,  // Basado en la altura de la pantalla para mantener proporción
     borderRadius: 30,
     backgroundColor: '#ffffff',
     shadowColor: "#000",
@@ -69,28 +69,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logoText: {
-    fontSize: width * 0.1,
+    fontSize: height * 0.05,  // Escala de fuente basada en la altura
     fontWeight: "700",
     color: "#1c92d2",
-    marginBottom: width * 0.05,
+    marginBottom: height * 0.02,
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 6,
   },
   imageContainer: {
-    width: "80%",
-    marginBottom: width * 0.08,
+    width: "100%",
+    marginBottom: height * 0.05,
     alignItems: 'center',
     justifyContent: 'center',
   },
   imageBorder: {
-    width: "100%",
+    width: height * 0.25,  // Proporcional al alto de la pantalla
     aspectRatio: 1,
-    borderRadius: width * 0.5,
+    borderRadius: height * 0.125,  // Radio proporcional
     borderWidth: 5,
-    borderColor: 'linear-gradient(135deg, #1c92d2, #f2fcfe)', // Degradado en el borde
+    borderColor: '#1c92d2',
     overflow: 'hidden',
-    backgroundColor: '#ffffff', // Fondo blanco para un contraste limpio
+    backgroundColor: '#ffffff',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -102,24 +102,24 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   textDiv: {
-    width: "90%",
+    width: "100%",
     alignItems: "center",
-    marginBottom: width * 0.05,
+    marginBottom: height * 0.03,
   },
   welcomeText: {
-    fontSize: width * 0.08,
+    fontSize: height * 0.04,  // Escala de fuente basada en la altura
     fontWeight: "700",
-    color: "#1c92d2", // Color acorde al esquema del fondo
-    marginBottom: width * 0.05,
+    color: "#1c92d2",
+    marginBottom: height * 0.02,
     textAlign: "center",
     letterSpacing: 3,
   },
   descriptionText: {
-    fontSize: width * 0.045,
+    fontSize: height * 0.025,  // Escala de fuente basada en la altura
     fontWeight: "400",
-    color: "#34495e", // Un gris oscuro para legibilidad
+    color: "#34495e",
     textAlign: "center",
-    lineHeight: width * 0.07,
+    lineHeight: height * 0.035,  // Espaciado entre líneas
     paddingHorizontal: width * 0.05,
   },
 });

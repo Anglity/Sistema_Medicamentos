@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, View, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { TextInput, RadioButton, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
 import { Text } from 'react-native';
 
@@ -33,6 +33,9 @@ const LoginScreen = () => {
       const user = userCredential.user;
 
       if (user.emailVerified) {
+        // Limpiar los campos de entrada
+        setEmail("");
+        setPassword("");
         navigation.navigate("Home");
       } else {
         Alert.alert(
@@ -43,8 +46,52 @@ const LoginScreen = () => {
         auth.signOut(); // Opcional: Cerrar sesión automáticamente si el correo no está verificado
       }
     } catch (error) {
-      setError(error.message);
+      handleAuthError(error);
     }
+  }
+
+  async function resetPassword() {
+    if (!email) {
+      Alert.alert(
+        "Correo electrónico requerido",
+        "Por favor, ingresa tu correo electrónico para restablecer tu contraseña.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        "Correo enviado",
+        "Te hemos enviado un correo electrónico con un enlace para restablecer tu contraseña.",
+        [{ text: "OK" }]
+      );
+    } catch (error) {
+      handleAuthError(error);
+    }
+  }
+
+  function handleAuthError(error) {
+    let errorMessage = "";
+    switch (error.code) {
+      case "auth/invalid-email":
+        errorMessage = "El correo electrónico ingresado no es válido.";
+        break;
+      case "auth/user-disabled":
+        errorMessage = "Esta cuenta ha sido deshabilitada.";
+        break;
+      case "auth/user-not-found":
+        errorMessage = "No se encontró ninguna cuenta con este correo electrónico.";
+        break;
+      case "auth/wrong-password":
+        errorMessage = "La contraseña ingresada es incorrecta.";
+        break;
+      default:
+        errorMessage = "Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.";
+    }
+    Alert.alert("Error de autenticación", errorMessage, [{ text: "OK" }]);
   }
 
   return (
@@ -105,7 +152,7 @@ const LoginScreen = () => {
                   Recordarme
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => console.log("Forgot Password")}>
+              <TouchableOpacity onPress={resetPassword}>
                 <Text style={styles.forgotPasswordText}>
                   ¿Olvidaste tu contraseña?
                 </Text>
@@ -136,12 +183,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E3F2FD",
-  },
-  innerContainer: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: height * 0.05,
+  },
+  innerContainer: {
+    width: "90%",
+    alignItems: "center",
+    paddingVertical: height * 0.03,
   },
   backButton: {
     position: "absolute",
@@ -150,7 +198,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   form: {
-    width: width * 0.85,
+    width: "100%",
     padding: height * 0.03,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -227,7 +275,7 @@ const styles = StyleSheet.create({
   radioText: {
     fontSize: width * 0.04,
     color: "#666",
-    marginLeft: 5,
+    marginLeft: -3,
   },
   forgotPasswordText: {
     color: "#03A9F4",
