@@ -16,7 +16,7 @@ const icons = [
 ];
 
 const menuItems = [
-  { nome: "Resetar", function: "resetReminders" },
+  { nome: "Perfil", function: "navigateToProfile" },
   { nome: "Sair", function: "deslogarUser" },
 ];
 
@@ -44,13 +44,12 @@ const HomeScreen = () => {
     });
   };
 
-  const getIconByName = (nome) => {
-    const foundIcon = icons.find((item) => item.nome === nome);
-    return foundIcon ? foundIcon.icon : null;
+  const navigateToProfile = () => {
+    navigation.navigate("Profile"); // Asegúrate de que "Profile" coincide con el nombre registrado en el stack navigator
   };
 
-  const getStatusIconByName = (nome) => {
-    const foundIcon = statusIcons.find((item) => item.nome === nome);
+  const getIconByName = (nome) => {
+    const foundIcon = icons.find((item) => item.nome === nome);
     return foundIcon ? foundIcon.icon : null;
   };
 
@@ -135,8 +134,8 @@ const HomeScreen = () => {
               key={index}
               onPress={() => {
                 setMenuVisible(false);
-                if (item.function === "resetReminders") {
-                  resetReminders();
+                if (item.function === "navigateToProfile") {
+                  navigateToProfile();
                 } else if (item.function === "deslogarUser") {
                   deslogarUser();
                 }

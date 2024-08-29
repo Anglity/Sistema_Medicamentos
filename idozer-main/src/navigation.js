@@ -7,7 +7,8 @@ import RegisterScreen from "./screens/RegisterScreen";
 import NewReminder from "./screens/NewReminder";
 import EditReminder from "./screens/EditReminder";
 import HomeScreen from "./screens/HomeScreen";
-import HappyScreen from "./screens/HappyScreen"; // Importa HappyScreen
+import HappyScreen from "./screens/HappyScreen";
+import ProfileScreen from "./screens/ProfileScreen"; // Importa ProfileScreen
 
 const Stack = createStackNavigator();
 
@@ -47,7 +48,12 @@ const Navigation = () => {
         />
         <Stack.Screen
           name="Happy"
-          component={HappyScreen} // Agrega HappyScreen aquí
+          component={HappyScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen} // Agrega ProfileScreen aquí
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

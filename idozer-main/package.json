@@ -21,6 +21,7 @@
     "date-fns": "^2.30.0",
     "expo": "49.0.0",
     "expo-app-loading": "^2.1.1",
+    "expo-image-picker": "~14.3.2",
     "expo-linear-gradient": "~12.3.0",
     "expo-splash-screen": "~0.20.5",
     "expo-status-bar": "~1.6.0",
