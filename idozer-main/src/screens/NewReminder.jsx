@@ -1,101 +1,190 @@
 import React, { useState } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import { StyleSheet, View, ScrollView, Dimensions } from "react-native";
 import { BoldText, RegularText } from "../components/Text";
 import { useNavigation } from "@react-navigation/native";
 import SelectDropdown from "react-native-select-dropdown";
 import { Icon } from "react-native-elements";
+import { Button, TextInput, TouchableRipple, useTheme, Snackbar, Switch } from 'react-native-paper';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import uuid from "react-native-uuid";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAlarm } from 'react-native-simple-alarm';
 import moment from 'moment';
-import { Button, TextInput, TouchableRipple } from 'react-native-paper';
+import 'moment/locale/es';
+import { ref, set, update } from 'firebase/database';
+import { db } from '../services/firebase';
+
+moment.locale('es');
+
+const { width, height } = Dimensions.get('window');
+const scale = (size) => (width / 375) * size;
 
 const tiposMedicamentos = ["Comprimido", "Cápsula"];
-const diasDeLaSemana = [
-  { id: 1, dia: "Domingo", short: "dom" },
-  { id: 2, dia: "Lunes", short: "lun" },
-  { id: 3, dia: "Martes", short: "mar" },
-  { id: 4, dia: "Miércoles", short: "mié" },
-  { id: 5, dia: "Jueves", short: "jue" },
-  { id: 6, dia: "Viernes", short: "vie" },
-  { id: 7, dia: "Sábado", short: "sáb" },
+const intervalosRepeticion = [
+  "15 min", "30 min", "45 min", "1 hora", "2 horas", "3 horas", "4 horas", "6 horas", "8 horas", "12 horas", "24 horas"
 ];
 
 const NuevoRecordatorio = () => {
+  const theme = useTheme();
   const [nombreMedicamento, setNombreMedicamento] = useState("");
   const [tipoMedicamento, setTipoMedicamento] = useState(null);
   const [dosaje, setDosaje] = useState("");
   const [hora, setHora] = useState("");
-  const [dia, setDia] = useState("");
-
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
-  const [horaSeleccionada, setHoraSeleccionada] = useState(null);
+  const [fecha, setFecha] = useState(new Date());
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarError, setSnackbarError] = useState(false);
+  const [cantidadMedicamentos, setCantidadMedicamentos] = useState("");
+  const [horaSegundoMedicamento, setHoraSegundoMedicamento] = useState("");
+  const [cantidadSegundoMedicamento, setCantidadSegundoMedicamento] = useState("");
+  const [repetirRecordatorio, setRepetirRecordatorio] = useState(false);
+  const [intervaloRepeticion, setIntervaloRepeticion] = useState(null);
 
   const navigation = useNavigation();
 
-  const crearNuevaAlarma = async () => {
+  const crearNuevaAlarma = async (recordatorioId) => {
     try {
       await createAlarm({
-        active: false,
-        date: moment().format(),
+        active: true,
+        date: moment(fecha).format(),
         message: 'Recordatorio de medicamento',
         snooze: 1,
       });
+
+      if (repetirRecordatorio && intervaloRepeticion) {
+        programarRepeticion(recordatorioId);
+      }
     } catch (e) {
       console.log(e);
+      showError("Error al crear la alarma");
     }
   };
 
-  async function crearRecordatorio() {
+  const programarRepeticion = async (recordatorioId) => {
+    const intervalMapping = {
+      "15 min": 15,
+      "30 min": 30,
+      "45 min": 45,
+      "1 hora": 60,
+      "2 horas": 120,
+      "3 horas": 180,
+      "4 horas": 240,
+      "6 horas": 360,
+      "8 horas": 480,
+      "12 horas": 720,
+      "24 horas": 1440,
+    };
+
+    const intervaloMinutos = intervalMapping[intervaloRepeticion];
+    const nuevaHora = moment(fecha).add(intervaloMinutos, 'minutes').format('HH:mm');
+    const nuevoRecordatorio = {
+      hora: nuevaHora,
+      repetir: true,
+      intervaloRepeticion,
+    };
+
+    try {
+      const recordatorioRef = ref(db, `recordatorios/${recordatorioId}`);
+      await update(recordatorioRef, nuevoRecordatorio);
+      console.log("¡Recordatorio actualizado para repetirse!");
+    } catch (error) {
+      console.error("Error al programar la repetición: ", error);
+      showError("Error al programar la repetición");
+    }
+  };
+
+  const guardarRecordatorio = async (recordatorio) => {
+    try {
+      const recordatorioRef = ref(db, `recordatorios/${recordatorio.id}`);
+      await set(recordatorioRef, recordatorio);
+      console.log("¡Recordatorio guardado en Firebase!");
+    } catch (error) {
+      console.error("Error al guardar el recordatorio en Firebase: ", error);
+      showError("Error al guardar el recordatorio en Firebase");
+    }
+  };
+
+  const crearRecordatorio = async () => {
     const nuevoRecordatorio = {
       id: uuid.v4(),
-      iconStatus: "relogio",
+      iconStatus: "clock-outline",
       titulo: nombreMedicamento,
       dosagem: dosaje,
       horario: hora,
-      dia: dia,
+      fecha: moment(fecha).format('dddd, D [de] MMMM [de] YYYY'),
       iconAction: tipoMedicamento,
+      cantidadMedicamentos,
+      horaSegundoMedicamento: cantidadMedicamentos > 1 ? horaSegundoMedicamento : null,
+      cantidadSegundoMedicamento: cantidadMedicamentos > 1 ? cantidadSegundoMedicamento : null,
+      repetir: repetirRecordatorio,
+      intervaloRepeticion: repetirRecordatorio ? intervaloRepeticion : null,
     };
 
-    const obtenerRecordatorio = await AsyncStorage.getItem("lembretes");
-    if (obtenerRecordatorio == null) {
-      await AsyncStorage.setItem("lembretes", JSON.stringify([nuevoRecordatorio]));
-    } else {
-      crearNuevaAlarma();
-      const lembretesJson = JSON.parse(obtenerRecordatorio);
+    try {
+      const obtenerRecordatorio = await AsyncStorage.getItem("lembretes");
+      const lembretesJson = obtenerRecordatorio ? JSON.parse(obtenerRecordatorio) : [];
       lembretesJson.push(nuevoRecordatorio);
-      await AsyncStorage.removeItem("lembretes");
       await AsyncStorage.setItem("lembretes", JSON.stringify(lembretesJson));
-    }
-    console.log("¡Nuevo recordatorio agregado!");
-    resetearPagina();
-    navigation.navigate("Home");
-  }
 
-  function resetearPagina() {
+      await guardarRecordatorio(nuevoRecordatorio);
+
+      crearNuevaAlarma(nuevoRecordatorio.id);
+
+      showMessage("¡Nuevo recordatorio guardado exitosamente!");
+      resetearPagina();
+      navigation.navigate("Home");
+    } catch (error) {
+      console.error("Error al crear el recordatorio: ", error);
+      showError("Error al crear el recordatorio");
+    }
+  };
+
+  const showMessage = (message) => {
+    setSnackbarMessage(message);
+    setSnackbarError(false);
+    setSnackbarVisible(true);
+  };
+
+  const showError = (message) => {
+    setSnackbarMessage(message);
+    setSnackbarError(true);
+    setSnackbarVisible(true);
+  };
+
+  const resetearPagina = () => {
     setNombreMedicamento("");
     setTipoMedicamento(null);
     setDosaje("");
     setHora("");
-    setDia("");
-    setHoraSeleccionada("");
-  }
-
-  const mostrarDatePicker = () => {
-    setDatePickerVisible(true);
+    setFecha(new Date());
+    setCantidadMedicamentos("");
+    setHoraSegundoMedicamento("");
+    setCantidadSegundoMedicamento("");
+    setRepetirRecordatorio(false);
+    setIntervaloRepeticion(null);
   };
 
-  const ocultarDatePicker = () => {
-    setDatePickerVisible(false);
+  const mostrarTimePicker = () => setTimePickerVisible(true);
+  const ocultarTimePicker = () => setTimePickerVisible(false);
+
+  const confirmarHora = (date) => {
+    const formattedTime = moment(date).format('HH:mm');
+    setHora(formattedTime);
+    ocultarTimePicker();
+
+    if (cantidadMedicamentos > 1) {
+      const segundaHora = moment(date).add(8, 'hours').format('HH:mm');
+      setHoraSegundoMedicamento(segundaHora);
+    }
   };
 
-  const confirmarHora = (time) => {
-    const horas = String(time.getHours()).padStart(2, '0');
-    const minutos = String(time.getMinutes()).padStart(2, '0');
-    setHoraSeleccionada(`${horas}:${minutos}`);
-    setHora(`${horas}:${minutos}`);
+  const mostrarDatePicker = () => setDatePickerVisible(true);
+  const ocultarDatePicker = () => setDatePickerVisible(false);
+
+  const confirmarFecha = (date) => {
+    setFecha(date);
     ocultarDatePicker();
   };
 
@@ -103,113 +192,220 @@ const NuevoRecordatorio = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.form}>
         <View style={styles.header}>
-          <BoldText texto="Agregar un nuevo recordatorio" size={22} style={styles.headerText} />
-          <RegularText texto="Registrar un nuevo medicamento:" size={18} style={styles.subHeaderText} />
+          <BoldText texto="Registrar Medicamento" size={scale(28)} style={styles.headerText} />
+          <RegularText texto="Complete los detalles del medicamento a continuación" size={scale(16)} style={styles.subHeaderText} />
         </View>
 
-        <RegularText texto="Nombre del Medicamento*" size={16} style={styles.labelText} />
-        <TextInput
-          label=""
-          mode="outlined"
-          style={styles.input}
-          value={nombreMedicamento}
-          placeholder="Ej: Ibuprofeno"
-          onChangeText={(text) => setNombreMedicamento(text)}
-          autoCapitalize="none"
-          theme={{ colors: { primary: '#1E88E5', text: '#000' } }}
-        />
-
         <View style={styles.formElement}>
-          <RegularText texto="Tipo de Medicamento*" size={16} style={styles.labelText} />
-          <SelectDropdown
-            data={tiposMedicamentos}
-            onSelect={(selectedItem) => setTipoMedicamento(selectedItem)}
-            defaultButtonText="Seleccione el tipo"
-            buttonStyle={styles.dropdown1BtnStyle}
-            buttonTextStyle={styles.btnTextStyle}
-            renderDropdownIcon={(isOpened) => (
-              <Icon
-                name={isOpened ? "chevron-up" : "chevron-down"}
-                type="font-awesome"
-                color="#1E88E5"
-                size={16}
-              />
-            )}
-            dropdownIconPosition="right"
-            dropdownStyle={styles.dropdownStyle}
-            rowTextForSelection={(item) => item}
-            buttonTextAfterSelection={(selectedItem) => selectedItem}
-          />
+          <RegularText texto="Nombre del Medicamento*" size={scale(18)} style={styles.labelText} />
+          <View style={styles.inputContainer}>
+            <Icon name="pills" type="font-awesome-5" color={theme.colors.primary} size={22} />
+            <TextInput
+              label=""
+              mode="flat"
+              style={styles.input}
+              value={nombreMedicamento}
+              placeholder="Ej: Ibuprofeno"
+              onChangeText={setNombreMedicamento}
+              autoCapitalize="none"
+              underlineColor="transparent"
+              theme={{ colors: { primary: theme.colors.primary, text: theme.colors.text, background: "#FFF" } }}
+            />
+          </View>
         </View>
 
-        <RegularText texto="Dosaje*" size={16} style={styles.labelText} />
-        <TextInput
-          label=""
-          mode="outlined"
-          style={styles.input}
-          value={dosaje}
-          placeholder="Ej: 100mg"
-          onChangeText={(text) => setDosaje(text)}
-          autoCapitalize="none"
-          theme={{ colors: { primary: '#1E88E5', text: '#000' } }}
-        />
+        <View style={styles.formElement}>
+          <RegularText texto="Tipo de Medicamento*" size={scale(18)} style={styles.labelText} />
+          <View style={styles.selectContainer}>
+            <SelectDropdown
+              data={tiposMedicamentos}
+              onSelect={setTipoMedicamento}
+              defaultButtonText="Seleccione el tipo"
+              buttonStyle={styles.dropdownBtnStyle}
+              buttonTextStyle={styles.btnTextStyle}
+              renderDropdownIcon={(isOpened) => (
+                <Icon
+                  name={isOpened ? "chevron-up" : "chevron-down"}
+                  type="font-awesome"
+                  color={theme.colors.primary}
+                  size={18}
+                />
+              )}
+              dropdownIconPosition="right"
+              dropdownStyle={styles.dropdownStyle}
+              rowTextForSelection={(item) => item}
+              buttonTextAfterSelection={(selectedItem) => selectedItem}
+            />
+          </View>
+        </View>
 
         <View style={styles.formElement}>
-          <RegularText texto="Hora del recordatorio*" size={16} style={styles.labelText} />
-          <TouchableRipple
-            onPress={mostrarDatePicker}
-            rippleColor="rgba(0, 0, 0, .32)"
-            style={styles.timeButton}
-          >
-            <View>
-              <BoldText
-                texto={horaSeleccionada ? horaSeleccionada : "Seleccionar Hora"}
-                color="#1E88E5"
-                size={18}
+          <RegularText texto="Dosaje*" size={scale(18)} style={styles.labelText} />
+          <View style={styles.inputContainer}>
+            <Icon name="weight" type="font-awesome-5" color={theme.colors.primary} size={22} />
+            <TextInput
+              label=""
+              mode="flat"
+              style={styles.input}
+              value={dosaje}
+              placeholder="Ej: 100mg"
+              onChangeText={setDosaje}
+              autoCapitalize="none"
+              underlineColor="transparent"
+              theme={{ colors: { primary: theme.colors.primary, text: theme.colors.text, background: "#FFF" } }}
+            />
+          </View>
+        </View>
+
+        <View style={styles.formElement}>
+          <RegularText texto="Cantidad de Medicamentos*" size={scale(18)} style={styles.labelText} />
+          <View style={styles.inputContainer}>
+            <Icon name="pills" type="font-awesome-5" color={theme.colors.primary} size={22} />
+            <TextInput
+              label=""
+              mode="flat"
+              style={styles.input}
+              value={cantidadMedicamentos}
+              placeholder="Ej: 2"
+              onChangeText={setCantidadMedicamentos}
+              keyboardType="numeric"
+              underlineColor="transparent"
+              theme={{ colors: { primary: theme.colors.primary, text: theme.colors.text, background: "#FFF" } }}
+            />
+          </View>
+        </View>
+
+        <View style={styles.dateTimeContainer}>
+          <View style={styles.formElementSmall}>
+            <RegularText texto="Fecha*" size={scale(18)} style={styles.labelTextSmall} />
+            <TouchableRipple
+              onPress={mostrarDatePicker}
+              rippleColor="rgba(0, 0, 0, .1)"
+              style={styles.timeButtonSmall}
+            >
+              <View style={styles.timeButtonContent}>
+                <Icon name="calendar" type="font-awesome" color={theme.colors.primary} size={20} />
+                <BoldText
+                  texto={fecha ? moment(fecha).format('DD/MM/YYYY') : "Fecha"}
+                  color={theme.colors.primary}
+                  size={scale(16)}
+                  style={styles.timeTextSmall}
+                />
+              </View>
+            </TouchableRipple>
+            <DateTimePickerModal
+              isVisible={datePickerVisible}
+              mode="date"
+              onConfirm={confirmarFecha}
+              onCancel={ocultarDatePicker}
+              locale="es-ES"
+            />
+          </View>
+
+          <View style={styles.formElementSmall}>
+            <RegularText texto="Hora*" size={scale(18)} style={styles.labelTextSmall} />
+            <TouchableRipple
+              onPress={mostrarTimePicker}
+              rippleColor="rgba(0, 0, 0, .1)"
+              style={styles.timeButtonSmall}
+            >
+              <View style={styles.timeButtonContent}>
+                <Icon name="clock-outline" type="material-community" color={theme.colors.primary} size={20} />
+                <BoldText
+                  texto={hora ? hora : "Hora"}
+                  color={theme.colors.primary}
+                  size={scale(16)}
+                  style={styles.timeTextSmall}
+                />
+              </View>
+            </TouchableRipple>
+            <DateTimePickerModal
+              isVisible={timePickerVisible}
+              mode="time"
+              onConfirm={confirmarHora}
+              onCancel={ocultarTimePicker}
+              locale="es-ES"
+            />
+          </View>
+        </View>
+
+        {cantidadMedicamentos > 1 && (
+          <View style={styles.formElement}>
+            <RegularText texto="Cantidad del Segundo Medicamento*" size={scale(18)} style={styles.labelText} />
+            <View style={styles.inputContainer}>
+              <Icon name="weight" type="font-awesome-5" color={theme.colors.primary} size={22} />
+              <TextInput
+                label=""
+                mode="flat"
+                style={styles.input}
+                value={cantidadSegundoMedicamento}
+                placeholder="Ej: 100mg"
+                onChangeText={setCantidadSegundoMedicamento}
+                autoCapitalize="none"
+                underlineColor="transparent"
+                theme={{ colors: { primary: theme.colors.primary, text: theme.colors.text, background: "#FFF" } }}
               />
             </View>
-          </TouchableRipple>
-          <DateTimePickerModal
-            date={fechaSeleccionada}
-            isVisible={datePickerVisible}
-            mode="time"
-            is24Hour={true}
-            onConfirm={confirmarHora}
-            onCancel={ocultarDatePicker}
+            <RegularText texto={`Se tomará a las ${horaSegundoMedicamento}`} size={scale(14)} style={styles.subHeaderText} />
+          </View>
+        )}
+
+        <View style={styles.switchContainer}>
+          <RegularText texto="Repetir Recordatorio" size={scale(18)} style={styles.labelText} />
+          <Switch
+            value={repetirRecordatorio}
+            onValueChange={() => setRepetirRecordatorio(!repetirRecordatorio)}
+            style={styles.switch}
           />
         </View>
 
-        <View style={styles.formElement}>
-          <RegularText texto="Día del recordatorio*" size={16} style={styles.labelText} />
-          <SelectDropdown
-            data={diasDeLaSemana}
-            onSelect={(selectedItem) => setDia(selectedItem.short)}
-            defaultButtonText="Seleccione el día"
-            buttonStyle={styles.dropdown1BtnStyle}
-            buttonTextStyle={styles.btnTextStyle}
-            renderDropdownIcon={(isOpened) => (
-              <Icon
-                name={isOpened ? "chevron-up" : "chevron-down"}
-                type="font-awesome"
-                color="#1E88E5"
-                size={16}
+        {repetirRecordatorio && (
+          <View style={styles.formElement}>
+            <RegularText texto="Intervalo de Repetición*" size={scale(18)} style={styles.labelText} />
+            <View style={styles.selectContainer}>
+              <SelectDropdown
+                data={intervalosRepeticion}
+                onSelect={setIntervaloRepeticion}
+                defaultButtonText="Seleccione el intervalo"
+                buttonStyle={styles.dropdownBtnStyle}
+                buttonTextStyle={styles.btnTextStyle}
+                renderDropdownIcon={(isOpened) => (
+                  <Icon
+                    name={isOpened ? "chevron-up" : "chevron-down"}
+                    type="font-awesome"
+                    color={theme.colors.primary}
+                    size={18}
+                  />
+                )}
+                dropdownIconPosition="right"
+                dropdownStyle={styles.dropdownStyle}
+                rowTextForSelection={(item) => item}
+                buttonTextAfterSelection={(selectedItem) => selectedItem}
               />
-            )}
-            dropdownIconPosition="right"
-            dropdownStyle={styles.dropdownStyle}
-            rowTextForSelection={(item) => item.dia}
-            buttonTextAfterSelection={(selectedItem) => selectedItem.dia}
-          />
+            </View>
+          </View>
+        )}
+
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="contained"
+            onPress={crearRecordatorio}
+            style={styles.buttonRegister}
+            labelStyle={styles.buttonLabel}
+          >
+            <Icon name="save" type="font-awesome-5" color="#FFF" size={20} iconStyle={styles.buttonIcon} />
+            GUARDAR RECORDATORIO
+          </Button>
         </View>
 
-        <Button
-          mode="contained"
-          onPress={crearRecordatorio}
-          style={styles.buttonRegister}
-          labelStyle={{ color: "#FFF" }}
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={Snackbar.DURATION_SHORT}
+          style={{ backgroundColor: snackbarError ? theme.colors.error : theme.colors.primary }}
         >
-          GUARDAR RECORDATORIO
-        </Button>
+          {snackbarMessage}
+        </Snackbar>
       </View>
     </ScrollView>
   );
@@ -218,111 +414,203 @@ const NuevoRecordatorio = () => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    backgroundColor: "#ECEFF1",
+    paddingVertical: height * 0.02,
+    paddingHorizontal: width * 0.05,
+    backgroundColor: "#EFF3F6",
   },
   form: {
     width: "100%",
-    marginTop: 20,
+    marginTop: height * 0.015,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: width * 0.06,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: height * 0.03,
     alignItems: 'center',
   },
   headerText: {
-    color: '#1565C0',
+    color: '#2E3A47',
     fontWeight: 'bold',
-    fontSize: 24,
+    fontSize: scale(30),
+    fontFamily: 'Roboto-Black',
+    letterSpacing: 0.8,
+    textAlign: 'center',
   },
   subHeaderText: {
-    color: '#607D8B',
-    marginTop: 5,
-    fontSize: 18,
+    color: '#66788A',
+    marginTop: height * 0.01,
+    fontSize: scale(17),
+    fontFamily: 'Roboto-Regular',
+    letterSpacing: 0.4,
+    textAlign: 'center',
   },
   labelText: {
-    color: '#607D8B',
-    marginBottom: 10,
-    fontSize: 16,
+    color: '#2E3A47',
+    marginBottom: height * 0.015,
+    fontSize: scale(19),
+    fontFamily: 'Roboto-Bold',
+    fontWeight: '700',
   },
   formElement: {
-    marginBottom: 25,
+    marginBottom: height * 0.025,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    backgroundColor: "#F7F9FC",
+    paddingLeft: width * 0.04,
+    paddingRight: width * 0.02,
+    borderColor: "#D1D9E6",
+    borderWidth: 1,
+    height: height * 0.07,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: height * 0.02,
+  },
+  selectContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    backgroundColor: "#F7F9FC",
+    paddingLeft: width * 0.04,
+    paddingRight: width * 0.02,
+    borderColor: "#D1D9E6",
+    borderWidth: 1,
+    height: height * 0.07,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: height * 0.02,
+  },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: height * 0.025,
+  },
+  formElementSmall: {
+    flex: 1,
+    marginRight: width * 0.03,
+  },
+  labelTextSmall: {
+    color: '#2E3A47',
+    fontSize: scale(18),
+    fontFamily: 'Roboto-Bold',
+    fontWeight: '700',
+    marginBottom: height * 0.01,
+  },
+  timeButtonSmall: {
+    height: height * 0.07,
+    borderRadius: 14,
+    backgroundColor: "#F7F9FC",
+    justifyContent: "center",
+    alignItems: "center",
+    borderColor: "#D1D9E6",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  timeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeTextSmall: {
+    marginLeft: width * 0.03,
+    color: "#2E3A47",
+    fontFamily: 'Roboto-Medium',
+    fontSize: scale(17),
   },
   input: {
-    marginBottom: 20,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    fontSize: 16,
-    paddingLeft: 20,
-    color: "#37474F",
-    borderColor: "#CFD8DC",
-    borderWidth: 1,
+    flex: 1,
+    backgroundColor: "transparent",
+    fontSize: scale(17),
+    color: "#2E3A47",
+    marginLeft: width * 0.03,
+    fontFamily: 'Roboto-Regular',
   },
-  dropdown1BtnStyle: {
-    borderColor: "#CFD8DC",
-    borderWidth: 1,
-    width: "100%",
-    height: 50,
-    borderRadius: 30,
+  dropdownBtnStyle: {
+    flex: 1,
     backgroundColor: "#FFFFFF",
-    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E3E8EF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   btnTextStyle: {
-    fontFamily: "Roboto-Regular",
-    fontSize: 16,
-    color: "#1565C0",
+    fontSize: scale(16),
+    color: "#1F2D3D",
     textAlign: "left",
-    marginLeft: 8,
+    marginLeft: width * 0.02,
+    fontFamily: 'Roboto-Bold',
   },
   dropdownStyle: {
-    borderRadius: 20,
+    borderRadius: 14,
     backgroundColor: "#FFFFFF",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-  },
-  timeButton: {
-    width: "100%",
-    height: 50,
-    borderRadius: 30,
-    backgroundColor: "#E1F5FE",
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "#1565C0",
+    borderColor: "#D1D9E6",
     borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: height * 0.03,
+  },
+  switch: {
+    marginLeft: width * 0.02,
+  },
+  buttonContainer: {
+    marginTop: height * 0.04,
+    width: "100%",
+    alignItems: "center",
   },
   buttonRegister: {
-    marginTop: 25,
-    width: "100%",
-    height: 55,
-    borderRadius: 30,
+    width: "90%",
+    height: height * 0.075,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1565C0",
+    backgroundColor: "#3E8ED0",
+    borderColor: "#336899",
+    borderWidth: 2,
+    flexDirection: 'row',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  buttonLabel: {
+    color: "#FFFFFF",
+    fontSize: scale(17),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    fontFamily: 'Roboto-Bold',
+    letterSpacing: 1,
+  },
+  buttonIcon: {
+    marginRight: width * 0.02,
   },
 });
 
