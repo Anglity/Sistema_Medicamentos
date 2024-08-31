@@ -18,9 +18,9 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 
 | Pantalla de Inicio | Pantalla de Login o Registro | Pantalla de Login | Pantalla de Registro |
 | :-----------------: | :---------------------------: | :----------------: | :-------------------: |
-| ![Pantalla de Inicio](./assets/screenshots/inicio.png) | ![Pantalla de Login o Registro](./assets/screenshots/login-registro.png) | ![Pantalla de Login](./assets/screenshots/login.png) | ![Pantalla de Registro](./assets/screenshots/registro.png) |
+| ![Pantalla de Inicio](../assets/screenshots/inicio.png) | ![Pantalla de Login o Registro](../assets/screenshots/login-registro.png) | ![Pantalla de Login](../assets/screenshots/login.png) | ![Pantalla de Registro](../assets/screenshots/registro.png) |
 
 | Pantalla de Home | Pantalla de Agregar Nuevo Recordatorio |
 | :--------------: | :------------------------------------: |
-| ![Pantalla de Home](./assets/screenshots/home.png) | ![Pantalla de Agregar Nuevo Recordatorio](./assets/screenshots/agregar-recordatorio.png) |
+| ![Pantalla de Home](../assets/screenshots/home.png) | ![Pantalla de Agregar Nuevo Recordatorio](../assets/screenshots/agregar-recordatorio.png) |
 
