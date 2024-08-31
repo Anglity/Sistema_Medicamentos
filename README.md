@@ -15,10 +15,13 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 
 # Pantallas de la Aplicación 📸
 
+# Pantallas de la Aplicación
+
 | Pantalla de Inicio | Pantalla de Login o Registro | Pantalla de Login | Pantalla de Registro |
 | :-----------------: | :---------------------------: | :----------------: | :-------------------: |
-| <img src="./assets/screenshots/inicio.png" width="150"/> | <img src="./assets/screenshots/registro.png" width="150"/> | <img src="./assets/screenshots/login.png" width="150"/> | <img src="./assets/screenshots/crearcuenta.png" width="150"/> |
+| <img src="./capturas idozer/inicio.png" width="150"/> | <img src="./capturas idozer/registro.png" width="150"/> | <img src="./capturas idozer/login.png" width="150"/> | <img src="./capturas idozer/crearcuenta.png" width="150"/> |
 
-| Pantalla de Home | PantallaNuevo Recordatorio | Pantalla de Registro Exitoso |
-| :--------------: | :------------------------: | :--------------------------: |
-| <img src="./assets/screenshots/home.png" width="150"/> | <img src="./assets/screenshots/perfil.png" width="150"/> | <img src="./assets/screenshots/felicidades.png" width="150"/> |
+| Pantalla de Home | Pantalla de Agregar Nuevo Recordatorio | Pantalla de Registro Exitoso |
+| :--------------: | :------------------------------------: | :--------------------------: |
+| <img src="./capturas idozer/home.png" width="150"/> | <img src="./capturas idozer/perfil.png" width="150"/> | <img src="./capturas idozer/felicidades.png" width="150"/> |
+
