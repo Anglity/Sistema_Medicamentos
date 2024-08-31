@@ -14,10 +14,13 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 
 ## Overview / Screenshots 📸
 
-|                         Start Screen                         |                         Login Or Register                          |                       Login Screen                       |                      Register Screen                      |
-| :----------------------------------------------------------: | :----------------------------------------------------------------: | :------------------------------------------------------: | :-------------------------------------------------------: |
-| <img src="./assets/screenshots/login.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> |
+|# Pantallas de la Aplicación
 
-|                       Home Screen                       |                        Add New Reminder                        |
-| :-----------------------------------------------------: | :------------------------------------------------------------: |
-| <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> |
+| Pantalla de Inicio | Pantalla de Login o Registro | Pantalla de Login | Pantalla de Registro |
+| :-----------------: | :---------------------------: | :----------------: | :-------------------: |
+| ![Pantalla de Inicio](./assets/screenshots/inicio.png) | ![Pantalla de Login o Registro](./assets/screenshots/registro.png) | ![Pantalla de Login](./assets/screenshots/login.png) | ![Pantalla de Crear Cuenta](./assets/screenshots/crearcuenta.png) |
+
+| Pantalla de Home | Pantalla de Agregar Nuevo Recordatorio | Pantalla de Registro Exitoso|
+| :--------------: | :------------------------------------: |:---------------------------:|
+| ![Pantalla de Agregar Nuevo Recordatorio](./assets/screenshots/home.png) | ![Pantalla de Perfil](./assets/screenshots/perfil.png) | 
+![Pantalla de Registro Exitoso](./assets/screenshots/felicidades.png)
