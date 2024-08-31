@@ -22,5 +22,4 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 
 | Pantalla de Home | Pantalla de Agregar Nuevo Recordatorio | Pantalla de Registro Exitoso|
 | :--------------: | :------------------------------------: |:---------------------------:|
-| ![Pantalla de Agregar Nuevo Recordatorio](./assets/screenshots/home.png) | ![Pantalla de Perfil](./assets/screenshots/perfil.png) | 
-![Pantalla de Registro Exitoso](./assets/screenshots/felicidades.png)
+| ![Pantalla de Agregar Nuevo Recordatorio](./assets/screenshots/home.png) | ![Pantalla de Perfil](./assets/screenshots/perfil.png) |![Pantalla de Registro Exitoso](./assets/screenshots/felicidades.png)
