@@ -14,12 +14,12 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 
 ## Overview / Screenshots 📸
 
-|# Pantallas de la Aplicación
+# Pantallas de la Aplicación
 
 | Pantalla de Inicio | Pantalla de Login o Registro | Pantalla de Login | Pantalla de Registro |
 | :-----------------: | :---------------------------: | :----------------: | :-------------------: |
-| ![Pantalla de Inicio](./assets/screenshots/inicio.png) | ![Pantalla de Login o Registro](./assets/screenshots/registro.png) | ![Pantalla de Login](./assets/screenshots/login.png) | ![Pantalla de Crear Cuenta](./assets/screenshots/crearcuenta.png) |
+| <img src="./assets/screenshots/inicio.png" width="300"/> | <img src="./assets/screenshots/registro.png" width="300"/> | <img src="./assets/screenshots/login.png" width="300"/> | <img src="./assets/screenshots/crearcuenta.png" width="300"/> |
 
 | Pantalla de Home | Pantalla de Agregar Nuevo Recordatorio | Pantalla de Registro Exitoso|
 | :--------------: | :------------------------------------: |:---------------------------:|
-| ![Pantalla de Agregar Nuevo Recordatorio](./assets/screenshots/home.png) | ![Pantalla de Perfil](./assets/screenshots/perfil.png) |![Pantalla de Registro Exitoso](./assets/screenshots/felicidades.png)
+| <img src="./assets/screenshots/home.png" width="300"/> | <img src="./assets/screenshots/perfil.png" width="300"/> | <img src="./assets/screenshots/felicidades.png" width="300"/> |
