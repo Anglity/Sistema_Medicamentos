@@ -16,7 +16,7 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 
 |                         Start Screen                         |                         Login Or Register                          |                       Login Screen                       |                      Register Screen                      |
 | :----------------------------------------------------------: | :----------------------------------------------------------------: | :------------------------------------------------------: | :-------------------------------------------------------: |
-| <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> |
+| <img src="./assets/screenshots/login.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> | <img src="./assets/screenshots/.png" width="200" /> |
 
 |                       Home Screen                       |                        Add New Reminder                        |
 | :-----------------------------------------------------: | :------------------------------------------------------------: |
