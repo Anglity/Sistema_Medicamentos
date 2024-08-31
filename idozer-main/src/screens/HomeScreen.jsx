@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Dimensions, ScrollView } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Text, Button, IconButton, Menu, Divider, Card } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-const statusIcons = [
-  { nome: "done", icon: "check-circle" },
-  { nome: "relogio", icon: "clock-outline" },
-];
+import { db } from '../services/firebase';
+import { ref, query, orderByChild, equalTo, onValue } from 'firebase/database';
+import moment from 'moment';
 
 const icons = [
   { nome: "Comprimido", icon: "pill" },
@@ -21,17 +18,68 @@ const menuItems = [
 ];
 
 const daysOfWeek = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 const HomeScreen = () => {
-  const [lembretes, setLembretes] = useState([]);
-  const [lembretesFiltrados, setLembretesFiltrados] = useState([]);
+  const [recordatorios, setRecordatorios] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedItem, setSelectItem] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(moment().format('dddd, D [de] MMMM [de] YYYY'));
   const [menuVisible, setMenuVisible] = useState(false);
   const [isDayTime, setIsDayTime] = useState(true);
 
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
+
+  const fetchRecordatorios = async (day) => {
+    setLoading(true);
+    
+    const formattedDay = moment(day, 'dddd, D [de] MMMM [de] YYYY').format('dddd, D [de] MMMM [de] YYYY');
+    const recordatoriosRef = query(ref(db, 'recordatorios'), orderByChild('fecha'), equalTo(formattedDay));
+    
+    onValue(recordatoriosRef, (snapshot) => {
+      const fetchedData = [];
+      snapshot.forEach((childSnapshot) => {
+        fetchedData.push(childSnapshot.val());
+      });
+      setRecordatorios(fetchedData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching data: ", error);
+      setLoading(false);
+    });
+  };
+
+  const getIconByName = (nombre) => {
+    const iconMapping = {
+      Comprimido: "pill",
+      Cápsula: "capsule",
+    };
+    return iconMapping[nombre] || "help-circle";
+  };
+
+  const deslogarUser = async () => {
+    navigation.navigate("Start");
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      fetchRecordatorios(selectedDay);
+    }
+  }, [isFocused, selectedDay]);
+
+  useEffect(() => {
+    const currentHour = new Date().getHours();
+    setIsDayTime(currentHour >= 6 && currentHour < 18);
+  }, []);
+
+  const handleDaySelect = (day) => {
+    setSelectedDay(day);
+    fetchRecordatorios(day);
+  };
+
+  const toggleTheme = () => {
+    setIsDayTime(!isDayTime);
+  };
 
   const navigateToNewReminder = () => {
     navigation.navigate("NewReminder");
@@ -40,78 +88,12 @@ const HomeScreen = () => {
   const navigateToEditReminder = (item) => {
     navigation.navigate("EditReminder", {
       item: item,
-      reminders: lembretes,
+      reminders: recordatorios,
     });
   };
 
   const navigateToProfile = () => {
-    navigation.navigate("Profile"); // Asegúrate de que "Profile" coincide con el nombre registrado en el stack navigator
-  };
-
-  const getIconByName = (nome) => {
-    const foundIcon = icons.find((item) => item.nome === nome);
-    return foundIcon ? foundIcon.icon : null;
-  };
-
-  const getLembretes = async () => {
-    try {
-      const data = await AsyncStorage.getItem("lembretes");
-      if (data !== null) {
-        setLembretes(JSON.parse(data));
-        filtrarLembretes(selectedItem, JSON.parse(data));
-      } else {
-        setLembretes([]);
-        setLembretesFiltrados([]);
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filtrarLembretes = (filtro, lembretesData = lembretes) => {
-    const resultadoFiltrado = lembretesData.filter(
-      (objeto) => objeto.dia === filtro
-    );
-    setLembretesFiltrados(resultadoFiltrado);
-  };
-
-  const resetReminders = async () => {
-    await AsyncStorage.removeItem("lembretes");
-    setLembretes([]);
-    setLembretesFiltrados([]);
-  };
-
-  const deslogarUser = async () => {
-    navigation.navigate("Start");
-  };
-
-  const isFocused = useIsFocused();
-  useEffect(() => {
-    if (isFocused) {
-      setLoading(true);
-      getLembretes();
-    }
-  }, [isFocused]);
-
-  useEffect(() => {
-    if (selectedItem) {
-      filtrarLembretes(selectedItem);
-    }
-  }, [lembretes, selectedItem]);
-
-  useEffect(() => {
-    const currentHour = new Date().getHours();
-    setIsDayTime(currentHour >= 6 && currentHour < 18);
-  }, []);
-
-  const handleDaySelect = (day) => {
-    setSelectItem(day);
-  };
-
-  const toggleTheme = () => {
-    setIsDayTime(!isDayTime);
+    navigation.navigate("Profile");
   };
 
   return (
@@ -156,34 +138,23 @@ const HomeScreen = () => {
           <ActivityIndicator size="large" color="#05B494" />
         ) : (
           <View style={styles.reminderList}>
-            {lembretesFiltrados.length > 0 ? (
-              lembretesFiltrados.map((item) => (
+            {recordatorios.length > 0 ? (
+              recordatorios.map((item, index) => (
                 <TouchableOpacity
-                  key={item.id}
+                  key={index}
                   onPress={() => navigateToEditReminder(item)}
                 >
                   <Card style={isDayTime ? styles.reminderCardDay : styles.reminderCardNight}>
                     <View style={styles.reminderRow}>
                       <View style={isDayTime ? styles.reminderIconContainerDay : styles.reminderIconContainerNight}>
-                        <MaterialCommunityIcons
-                          name={getIconByName(item.iconAction)}
-                          size={30}
-                          color="#FFFFFF"
-                        />
+                        <MaterialCommunityIcons name={getIconByName(item.iconAction)} size={30} color="#FFFFFF" />
                       </View>
                       <View style={styles.reminderDetails}>
                         <Text style={isDayTime ? styles.reminderTitleDay : styles.reminderTitleNight}>{item.titulo}</Text>
-                        <Text style={isDayTime ? styles.reminderTimeTextDay : styles.reminderTimeTextNight}>Time {item.horario}</Text>
-                        <Text style={isDayTime ? styles.reminderDosageDay : styles.reminderDosageNight}>{item.dosagem}</Text>
+                        <Text style={isDayTime ? styles.reminderTimeTextDay : styles.reminderTimeTextNight}>Hora: {item.horario}</Text>
+                        <Text style={isDayTime ? styles.reminderDosageDay : styles.reminderDosageNight}>Dosaje: {item.dosagem}</Text>
+                        <Text style={isDayTime ? styles.reminderQuantityDay : styles.reminderQuantityNight}>Cantidad: {item.cantidadMedicamentos}</Text>
                       </View>
-                      <View style={isDayTime ? styles.statusLabelDay : styles.statusLabelNight}>
-                        <Text>{item.status}</Text>
-                      </View>
-                      <MaterialCommunityIcons
-                        name="dots-vertical"
-                        size={24}
-                        color="#757575"
-                      />
                     </View>
                   </Card>
                 </TouchableOpacity>
@@ -223,11 +194,9 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
       let currentDay = startOfWeek + i;
       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
       if (currentDay <= 0) {
-        // Previous month days
         const daysInPreviousMonth = new Date(selectedYear, selectedMonth, 0).getDate();
         daysArray.push(daysInPreviousMonth + currentDay);
       } else if (currentDay > daysInMonth) {
-        // Next month days
         daysArray.push(currentDay - daysInMonth);
       } else {
         daysArray.push(currentDay);
@@ -241,7 +210,8 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
     setSelectedDay(index);
     const newDate = new Date(selectedYear, selectedMonth, daysInWeek[index]);
     setSelectedDate(newDate.getDate());
-    onDaySelect(daysOfWeek[index]);
+    const formattedDate = moment(newDate).format('dddd, D [de] MMMM [de] YYYY');
+    onDaySelect(formattedDate);
   };
 
   const handleMonthSelect = (monthIndex) => {
@@ -252,12 +222,10 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
     const currentDay = new Date().getDate();
 
     if (monthIndex === currentMonth) {
-      // If selecting the current month, navigate to the current day
       setSelectedDate(currentDay);
       setSelectedDay(new Date().getDay());
       updateDaysInWeek(currentDay);
     } else {
-      // For other months, start from the first day of the selected month
       const firstDayOfMonth = new Date(selectedYear, monthIndex, 1);
       setSelectedDate(1);
       setSelectedDay(firstDayOfMonth.getDay());
@@ -301,9 +269,9 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
           anchor={
-            <Button 
-              mode="outlined" 
-              onPress={() => setMenuVisible(true)} 
+            <Button
+              mode="outlined"
+              onPress={() => setMenuVisible(true)}
               labelStyle={isDayTime ? dayPickerStyles.monthButtonText : dayPickerStyles.monthButtonTextNight}
               style={isDayTime ? dayPickerStyles.monthButton : dayPickerStyles.monthButtonNight}
               icon={() => <MaterialCommunityIcons name="chevron-down" size={20} color={isDayTime ? "#333" : "#FFF"} />}
@@ -313,10 +281,10 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
           }
         >
           {months.map((month, index) => (
-            <Menu.Item 
-              key={index} 
-              onPress={() => handleMonthSelect(index)} 
-              title={`${month} ${selectedYear}`} 
+            <Menu.Item
+              key={index}
+              onPress={() => handleMonthSelect(index)}
+              title={`${month} ${selectedYear}`}
             />
           ))}
         </Menu>
@@ -391,7 +359,7 @@ const BottomNavigationBar = ({ isDayTime, toggleTheme, navigateToNewReminder }) 
 const dayPickerStyles = StyleSheet.create({
   container: {
     backgroundColor: "#FFFFFF",
-    padding: 10,
+    padding: 8,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -402,7 +370,7 @@ const dayPickerStyles = StyleSheet.create({
   },
   containerNight: {
     backgroundColor: "#2C2C2C",
-    padding: 10,
+    padding: 8,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -431,15 +399,15 @@ const dayPickerStyles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E5E5E5",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   monthButtonNight: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#555555",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   monthButtonText: {
     color: "#333",
@@ -464,8 +432,8 @@ const dayPickerStyles = StyleSheet.create({
   dayButton: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 5,
     borderRadius: 8,
   },
   selectedDayButton: {
@@ -502,29 +470,29 @@ const styles = StyleSheet.create({
   containerDay: {
     flex: 1,
     backgroundColor: "#F4F4F4",
-    paddingTop: 40,
-    paddingHorizontal: 15,
+    paddingTop: 30,
+    paddingHorizontal: 10,
   },
   containerNight: {
     flex: 1,
     backgroundColor: "#1A1A2E",
-    paddingTop: 40,
-    paddingHorizontal: 15,
+    paddingTop: 30,
+    paddingHorizontal: 10,
   },
   headerDiv: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 10,
   },
   appTitleDay: {
     color: "#00796B",
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
   },
   appTitleNight: {
     color: "#BB86FC",
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
   },
   iconButton: {
@@ -537,22 +505,22 @@ const styles = StyleSheet.create({
   },
   sectionTitleDay: {
     color: "#424242",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "600",
-    marginBottom: 15,
+    marginBottom: 10,
   },
   sectionTitleNight: {
     color: "#FFFFFF",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "600",
-    marginBottom: 15,
+    marginBottom: 10,
   },
   reminderList: {
     marginTop: 10,
   },
   reminderCardDay: {
-    borderRadius: 12,
-    marginBottom: 15,
+    borderRadius: 10,
+    marginBottom: 12,
     backgroundColor: "#FFFFFF",
     paddingVertical: 15,
     paddingHorizontal: 15,
@@ -565,8 +533,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   reminderCardNight: {
-    borderRadius: 12,
-    marginBottom: 15,
+    borderRadius: 10,
+    marginBottom: 12,
     backgroundColor: "#2C2C2C",
     paddingVertical: 15,
     paddingHorizontal: 15,
@@ -580,8 +548,9 @@ const styles = StyleSheet.create({
   },
   reminderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
   reminderIconContainerDay: {
     backgroundColor: "#03DAC6",
@@ -593,6 +562,27 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 10,
   },
+  reminderDetails: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  reminderTitleDay: {
+    color: "#212121",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  reminderTitleNight: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  reminderInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
   reminderTimeTextDay: {
     color: "#757575",
     fontSize: 14,
@@ -603,37 +593,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  reminderTitleDay: {
-    color: "#212121",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  reminderTitleNight: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
-  },
   reminderDosageDay: {
-    color: "#757575",
+    color: "#00796B",
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: "500",
   },
   reminderDosageNight: {
-    color: "#E0E0E0",
+    color: "#BB86FC",
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: "500",
+  },
+  reminderQuantityDay: {
+    color: "#00796B",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  reminderQuantityNight: {
+    color: "#BB86FC",
+    fontSize: 14,
+    fontWeight: "500",
   },
   statusLabelDay: {
     backgroundColor: "#D1C4E9",
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginTop: 5,
   },
   statusLabelNight: {
     backgroundColor: "#6200EA",
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginTop: 5,
   },
   noRemindersText: {
     color: "#9E9E9E",
@@ -647,9 +641,9 @@ const styles = StyleSheet.create({
     bottom: 20,
     right: 20,
     backgroundColor: "#FF4081",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -662,14 +656,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 50,
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -679,16 +673,16 @@ const styles = StyleSheet.create({
   navigationBarNight: {
     position: "absolute",
     bottom: 0,
-    left: 0,
+    left: 0, 
     right: 0,
-    height: 60,
+    height: 50,
     backgroundColor: "#162447",
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -702,10 +696,10 @@ const styles = StyleSheet.create({
   },
   centralButtonDay: {
     position: "absolute",
-    bottom: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: -15,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#007BFF",
     justifyContent: "center",
     alignItems: "center",
@@ -717,10 +711,10 @@ const styles = StyleSheet.create({
   },
   centralButtonNight: {
     position: "absolute",
-    bottom: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: -15,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#007BFF",
     justifyContent: "center",
     alignItems: "center",

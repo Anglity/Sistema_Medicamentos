@@ -13,7 +13,7 @@ Información y Alertas: Proporciona información sobre cada medicamento, incluye
 | :-----------------: | :---------------------------: | :----------------: | :-------------------: |
 | <img src="./capturas idozer/inicio.png" width="150"/> | <img src="./capturas idozer/registro.png" width="150"/> | <img src="./capturas idozer/login.png" width="150"/> | <img src="./capturas idozer/crearcuenta.png" width="150"/> |
 
-| Pantalla de Home | Pantalla de Agregar Nuevo Recordatorio | Pantalla de Registro Exitoso |
-| :--------------: | :------------------------------------: | :--------------------------: |
-| <img src="./capturas idozer/home.png" width="150"/> | <img src="./capturas idozer/perfil.png" width="150"/> | <img src="./capturas idozer/felicidades.png" width="150"/> |
+| Pantalla de Home | Pantalla Nuevo Recordatorio | Pantalla de Registro Exitoso |Pantalla de Agregar Nuevo Recordatorio |
+| :--------------: | :-------------------------: | :--------------------------: |:------------------------------------: |
+| <img src="./capturas idozer/home.png" width="150"/> | <img src="./capturas idozer/perfil.png" width="150"/> | <img src="./capturas idozer/felicidades.png" width="150"/> |<img src="./capturas idozer/recordatorio.png" width="150"/> |
 
