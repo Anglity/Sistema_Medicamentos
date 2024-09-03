@@ -4,7 +4,7 @@ import { BoldText, RegularText } from "../components/Text";
 import { useNavigation } from "@react-navigation/native";
 import SelectDropdown from "react-native-select-dropdown";
 import { Icon } from "react-native-elements";
-import { Button, TextInput, TouchableRipple, useTheme, Snackbar, Switch } from 'react-native-paper';
+import { Button, TextInput, TouchableRipple, useTheme, Snackbar, Switch, ActivityIndicator } from 'react-native-paper';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import uuid from "react-native-uuid";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -41,8 +41,17 @@ const NuevoRecordatorio = () => {
   const [cantidadSegundoMedicamento, setCantidadSegundoMedicamento] = useState("");
   const [repetirRecordatorio, setRepetirRecordatorio] = useState(false);
   const [intervaloRepeticion, setIntervaloRepeticion] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const navigation = useNavigation();
+
+  const validarCampos = () => {
+    if (!nombreMedicamento || !tipoMedicamento || !dosaje || !hora || !cantidadMedicamentos) {
+      showError("Por favor, completa todos los campos obligatorios.");
+      return false;
+    }
+    return true;
+  };
 
   const crearNuevaAlarma = async (recordatorioId) => {
     try {
@@ -62,7 +71,7 @@ const NuevoRecordatorio = () => {
     }
   };
 
-  const programarRepeticion = async (recordatorioId) => {
+  const programarRepeticiones = async (recordatorio) => {
     const intervalMapping = {
       "15 min": 15,
       "30 min": 30,
@@ -76,22 +85,31 @@ const NuevoRecordatorio = () => {
       "12 horas": 720,
       "24 horas": 1440,
     };
-
-    const intervaloMinutos = intervalMapping[intervaloRepeticion];
-    const nuevaHora = moment(fecha).add(intervaloMinutos, 'minutes').format('HH:mm');
-    const nuevoRecordatorio = {
-      hora: nuevaHora,
-      repetir: true,
-      intervaloRepeticion,
-    };
-
+  
+    const repeticiones = [];
+    let nuevaFecha = moment(recordatorio.fecha).add(intervalMapping[recordatorio.intervaloRepeticion], 'minutes');
+    
+    const MAX_REPETITIONS = 10; 
+  
+    for (let i = 0; i < MAX_REPETITIONS; i++) {
+      repeticiones.push({
+        id: uuid.v4(),
+        hora: nuevaFecha.format('HH:mm'),
+        fecha: nuevaFecha.format('YYYY-MM-DD'),
+        repetir: true,
+        intervaloRepeticion: recordatorio.intervaloRepeticion,
+        ...recordatorio
+      });
+      nuevaFecha = nuevaFecha.add(intervalMapping[recordatorio.intervaloRepeticion], 'minutes');
+    }
+  
     try {
-      const recordatorioRef = ref(db, `recordatorios/${recordatorioId}`);
-      await update(recordatorioRef, nuevoRecordatorio);
-      console.log("¡Recordatorio actualizado para repetirse!");
+      const recordatorioRef = ref(db, `recordatorios/${recordatorio.id}`);
+      await set(recordatorioRef, { ...recordatorio, repeticiones });
+      console.log("Repeticiones programadas en Firebase");
     } catch (error) {
-      console.error("Error al programar la repetición: ", error);
-      showError("Error al programar la repetición");
+      console.error("Error al programar las repeticiones: ", error);
+      showError("Error al programar las repeticiones");
     }
   };
 
@@ -107,6 +125,8 @@ const NuevoRecordatorio = () => {
   };
 
   const crearRecordatorio = async () => {
+    if (!validarCampos()) return;
+  
     const nuevoRecordatorio = {
       id: uuid.v4(),
       iconStatus: "clock-outline",
@@ -121,26 +141,34 @@ const NuevoRecordatorio = () => {
       repetir: repetirRecordatorio,
       intervaloRepeticion: repetirRecordatorio ? intervaloRepeticion : null,
     };
-
+  
+    setLoading(true);
+  
     try {
       const obtenerRecordatorio = await AsyncStorage.getItem("lembretes");
       const lembretesJson = obtenerRecordatorio ? JSON.parse(obtenerRecordatorio) : [];
       lembretesJson.push(nuevoRecordatorio);
       await AsyncStorage.setItem("lembretes", JSON.stringify(lembretesJson));
-
+  
       await guardarRecordatorio(nuevoRecordatorio);
-
-      crearNuevaAlarma(nuevoRecordatorio.id);
-
+  
+      if (repetirRecordatorio && intervaloRepeticion) {
+        await programarRepeticiones(nuevoRecordatorio); 
+      } else {
+        await crearNuevaAlarma(nuevoRecordatorio.id); 
+      }
+  
       showMessage("¡Nuevo recordatorio guardado exitosamente!");
       resetearPagina();
       navigation.navigate("Home");
     } catch (error) {
       console.error("Error al crear el recordatorio: ", error);
       showError("Error al crear el recordatorio");
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   const showMessage = (message) => {
     setSnackbarMessage(message);
     setSnackbarError(false);
@@ -387,15 +415,20 @@ const NuevoRecordatorio = () => {
         )}
 
         <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
-            onPress={crearRecordatorio}
-            style={styles.buttonRegister}
-            labelStyle={styles.buttonLabel}
-          >
-            <Icon name="save" type="font-awesome-5" color="#FFF" size={20} iconStyle={styles.buttonIcon} />
-            GUARDAR RECORDATORIO
-          </Button>
+          {loading ? (
+            <ActivityIndicator animating={true} color={theme.colors.primary} />
+          ) : (
+            <Button
+              mode="contained"
+              onPress={crearRecordatorio}
+              style={styles.buttonRegister}
+              labelStyle={styles.buttonLabel}
+              contentStyle={styles.buttonContent}
+            >
+              <Icon name="save" type="font-awesome-5" color="#FFF" size={20} iconStyle={styles.buttonIcon} />
+              GUARDAR RECORDATORIO
+            </Button>
+          )}
         </View>
 
         <Snackbar
@@ -588,18 +621,20 @@ const styles = StyleSheet.create({
   buttonRegister: {
     width: "90%",
     height: height * 0.075,
-    borderRadius: 14,
+    borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#3E8ED0",
-    borderColor: "#336899",
-    borderWidth: 2,
+    backgroundColor: "#4CAF50",
     flexDirection: 'row',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   buttonLabel: {
     color: "#FFFFFF",
