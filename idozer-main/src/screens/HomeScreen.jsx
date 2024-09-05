@@ -3,9 +3,13 @@ import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Dimensions, Scro
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Text, Button, IconButton, Menu, Divider, Card } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';  // Importamos Lottie
 import { db } from '../services/firebase';
 import { ref, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import moment from 'moment';
+
+// Obtenemos las dimensiones de la pantalla
+const { width } = Dimensions.get('window');
 
 const icons = [
   { nome: "Comprimido", icon: "pill" },
@@ -13,7 +17,6 @@ const icons = [
 ];
 
 const menuItems = [
-  { nome: "Perfil", function: "navigateToProfile" },
   { nome: "Sair", function: "deslogarUser" },
 ];
 
@@ -49,12 +52,15 @@ const HomeScreen = () => {
     });
   };
 
-  const getIconByName = (nombre) => {
-    const iconMapping = {
-      Comprimido: "pill",
-      Cápsula: "capsule",
-    };
-    return iconMapping[nombre] || "help-circle";
+  const getIconAnimation = (nombre) => {
+    switch (nombre) {
+      case 'Comprimido':
+        return require('../../assets/comprimido.png'); // Animación Lottie comprimido
+      case 'Cápsula':
+        return require('../../assets/capsulas.png'); // Animación Lottie cápsula
+      default:
+        //return require('../../assets/default.json'); // Animación default
+    }
   };
 
   const deslogarUser = async () => {
@@ -66,11 +72,6 @@ const HomeScreen = () => {
       fetchRecordatorios(selectedDay);
     }
   }, [isFocused, selectedDay]);
-
-  useEffect(() => {
-    const currentHour = new Date().getHours();
-    setIsDayTime(currentHour >= 6 && currentHour < 18);
-  }, []);
 
   const handleDaySelect = (day) => {
     setSelectedDay(day);
@@ -90,10 +91,6 @@ const HomeScreen = () => {
       item: item,
       reminders: recordatorios,
     });
-  };
-
-  const navigateToProfile = () => {
-    navigation.navigate("Profile");
   };
 
   return (
@@ -116,9 +113,7 @@ const HomeScreen = () => {
               key={index}
               onPress={() => {
                 setMenuVisible(false);
-                if (item.function === "navigateToProfile") {
-                  navigateToProfile();
-                } else if (item.function === "deslogarUser") {
+                if (item.function === "deslogarUser") {
                   deslogarUser();
                 }
               }}
@@ -147,7 +142,10 @@ const HomeScreen = () => {
                   <Card style={isDayTime ? styles.reminderCardDay : styles.reminderCardNight}>
                     <View style={styles.reminderRow}>
                       <View style={isDayTime ? styles.reminderIconContainerDay : styles.reminderIconContainerNight}>
-                        <MaterialCommunityIcons name={getIconByName(item.iconAction)} size={30} color="#FFFFFF" />
+                        <LottieView 
+                          source={getIconAnimation(item.iconAction)} 
+                          autoPlay loop style={{ width: 40, height: 40 }} 
+                        />
                       </View>
                       <View style={styles.reminderDetails}>
                         <Text style={isDayTime ? styles.reminderTitleDay : styles.reminderTitleNight}>{item.titulo}</Text>
@@ -160,15 +158,24 @@ const HomeScreen = () => {
                 </TouchableOpacity>
               ))
             ) : (
-              <Text style={styles.noRemindersText}>
-                No hay recordatorios para hoy.
-              </Text>
+              <View style={styles.noRemindersAnimation}>
+                <LottieView 
+                  source={require('../../assets/empty.json')} // Animación cuando no hay recordatorios
+                  autoPlay loop 
+                  style={{ width: 200, height: 200 }} 
+                />
+              </View>
             )}
           </View>
         )}
       </ScrollView>
 
-      <BottomNavigationBar isDayTime={isDayTime} toggleTheme={toggleTheme} navigateToNewReminder={navigateToNewReminder} />
+      <BottomNavigationBar 
+        isDayTime={isDayTime} 
+        toggleTheme={toggleTheme} 
+        navigateToNewReminder={navigateToNewReminder} 
+        
+      />
     </View>
   );
 };
@@ -330,9 +337,7 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
   );
 };
 
-const { width } = Dimensions.get("window");
-
-const BottomNavigationBar = ({ isDayTime, toggleTheme, navigateToNewReminder }) => {
+const BottomNavigationBar = ({ isDayTime, toggleTheme, navigateToNewReminder, navigateToProfile }) => {
   return (
     <View style={isDayTime ? styles.navigationBarDay : styles.navigationBarNight}>
       <TouchableOpacity style={styles.navButton} onPress={toggleTheme}>
@@ -349,7 +354,7 @@ const BottomNavigationBar = ({ isDayTime, toggleTheme, navigateToNewReminder }) 
       <TouchableOpacity style={styles.navButton}>
         <MaterialCommunityIcons name="file-document-outline" size={24} color="black" />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.navButton}>
+      <TouchableOpacity style={styles.navButton} onPress={navigateToProfile}>
         <MaterialCommunityIcons name="account-group-outline" size={24} color="black" />
       </TouchableOpacity>
     </View>
@@ -725,5 +730,4 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 });
-
 export default HomeScreen;
