@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Dimensions, ScrollView } from "react-native";
+import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Dimensions, ScrollView, Image,animation } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
-import { Text, Button, IconButton, Menu, Divider, Card } from 'react-native-paper';
+import { Text, Button, IconButton, Menu, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { db } from '../services/firebase';
+import { db, auth } from '../services/firebase';
 import { ref, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import moment from 'moment';
+import LottieView from 'lottie-react-native'; // Asegúrate de instalar la librería Lottie
 
-// Obtenemos las dimensiones de la pantalla
 const { width } = Dimensions.get('window');
 
 const icons = [
@@ -15,6 +15,100 @@ const icons = [
   { nome: "Cápsula", icon: "capsule" },
 ];
 
+const defaultPhoto = require('../../assets/kit.png'); // Foto de perfil por defecto
+const morningAnimation = require('../../assets/morning.json');
+const afternoonAnimation = require('../../assets/afternoon.json');
+const nightAnimation = require('../../assets/night.json');
+
+const Greeting = ({ username }) => {
+  const [greeting, setGreeting] = React.useState("");
+  const [animation, setAnimation] = React.useState(morningAnimation); // Animación por defecto
+
+  React.useEffect(() => {
+    const currentHour = new Date().getHours();
+
+    if (currentHour < 12) {
+      setGreeting("Buenos Días");
+      setAnimation(morningAnimation);
+    } else if (currentHour < 18) {
+      setGreeting("Buenas Tardes");
+      setAnimation(afternoonAnimation);
+    } else {
+      setGreeting("Buenas Noches");
+      setAnimation(nightAnimation);
+    }
+  }, []);
+
+  return (
+    <View style={styles.greetingRow}>
+      {/* Animación */}
+      <LottieView
+        source={animation}
+        autoPlay
+        loop
+        style={styles.animation}
+      />
+      {/* Saludo */}
+      <Text style={styles.greetingText}>{greeting}, {username}</Text>
+    </View>
+  );
+};
+
+
+
+const UserProfile = () => {
+  const [username, setUsername] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    if (user) {
+      const userId = user.uid;
+      const userQuery = query(ref(db, "datos"), orderByChild("userId"), equalTo(userId));
+
+      onValue(userQuery, (snapshot) => {
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          const userKey = Object.keys(userData)[0];
+          setUsername(userData[userKey].username || "Usuario");
+          setPhoto(userData[userKey].photo || null);
+        } else {
+          setError("No se encontró el usuario en la base de datos.");
+        }
+        setLoading(false);
+      }, (error) => {
+        setError(error.message);
+        setLoading(false);
+      });
+    } else {
+      setError("Usuario no autenticado.");
+      setLoading(false);
+    }
+  }, [user]);
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
+
+  if (error) {
+    return <Text>Error: {error}</Text>;
+  }
+
+  return (
+    <View style={styles.profileContainer}>
+      {/* Foto de perfil */}
+      <Image
+        source={photo ? { uri: photo } : defaultPhoto} // Usamos la imagen por defecto si no hay una foto
+        style={styles.avatar}
+      />
+      {/* Saludo y nombre del usuario */}
+      <Greeting username={username} />
+    </View>
+  );
+};
 const menuItems = [
   { nome: "Sair", function: "deslogarUser" },
 ];
@@ -99,17 +193,15 @@ const HomeScreen = () => {
   return (
     <View style={isDayTime ? styles.containerDay : styles.containerNight}>
       <View style={styles.headerDiv}>
+        {/* Perfil y nombre de usuario */}
+        <TouchableOpacity style={styles.profileHeader} onPress={() => setMenuVisible(true)}>
+          <UserProfile />
+        </TouchableOpacity>
+        
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
-          anchor={
-            <IconButton
-              icon="account-circle"
-              size={40}
-              onPress={() => setMenuVisible(true)}
-              style={styles.iconButton}
-            />
-          }
+          anchor={<View />}
         >
           {menuItems.map((item, index) => (
             <Menu.Item
@@ -125,43 +217,52 @@ const HomeScreen = () => {
           ))}
           <Divider />
         </Menu>
-        <Text style={isDayTime ? styles.appTitleDay : styles.appTitleNight}>idozer</Text>
-      </View>
-
-      <DayPicker onDaySelect={handleDaySelect} isDayTime={isDayTime} />
-
-      <ScrollView style={styles.content}>
-  <Text style={isDayTime ? styles.sectionTitleDay : styles.sectionTitleNight}>Recordatorios de Hoy</Text>
-  {loading ? (
-    <ActivityIndicator size="large" color="#05B494" />
-  ) : (
-    <View style={styles.reminderList}>
-      {recordatorios.length > 0 ? (
-        recordatorios.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => navigateToEditReminder(item)}
-          >
-            <ReminderCard item={item} />
-          </TouchableOpacity>
-        ))
-      ) : (
-        <View style={styles.noRemindersAnimation}>
-          <MaterialCommunityIcons 
-            name="emoticon-sad-outline" 
-            size={100} 
-            color="#FFB300" 
+  
+        {/* Contenedor para el título y la animación */}
+        <View style={styles.animationTitleContainer}>
+          <Text style={isDayTime ? styles.appTitleDay : styles.appTitleNight}>IDOZER</Text>
+          <LottieView
+            source={animation} // Debes asegurar que la animación esté definida previamente
+            autoPlay
+            loop
+            style={styles.animation}
           />
-          <Text style={isDayTime ? styles.noRemindersText : styles.noRemindersTextNight}>
-            No hay recordatorios para hoy
-          </Text>
         </View>
-      )}
-    </View>
-  )}
-</ScrollView>
-
-
+      </View>
+  
+      <DayPicker onDaySelect={handleDaySelect} isDayTime={isDayTime} />
+  
+      <ScrollView style={styles.content}>
+        <Text style={isDayTime ? styles.sectionTitleDay : styles.sectionTitleNight}>Recordatorios de Hoy</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#05B494" />
+        ) : (
+          <View style={styles.reminderList}>
+            {recordatorios.length > 0 ? (
+              recordatorios.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => navigateToEditReminder(item)}
+                >
+                  <ReminderCard item={item} />
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.noRemindersAnimation}>
+                <MaterialCommunityIcons 
+                  name="emoticon-sad-outline" 
+                  size={100} 
+                  color="#FFB300" 
+                />
+                <Text style={isDayTime ? styles.noRemindersText : styles.noRemindersTextNight}>
+                  No hay recordatorios para hoy
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+  
       <BottomNavigationBar 
         isDayTime={isDayTime} 
         toggleTheme={toggleTheme} 
@@ -170,7 +271,7 @@ const HomeScreen = () => {
       />
     </View>
   );
-};
+};  
 
 const DayPicker = ({ onDaySelect, isDayTime }) => {
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
@@ -231,8 +332,6 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
       updateDaysInWeek(1);
     }
   };
-
-  
 
   const handlePrevWeek = () => {
     const firstDayOfCurrentWeek = new Date(selectedYear, selectedMonth, daysInWeek[0]);
@@ -409,7 +508,7 @@ const dayPickerStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#4A4A4A",
-    fontFamily: "sans-serif", // Usamos una fuente predeterminada
+    fontFamily: "sans-serif",
   },
   headerTextNight: {
     fontSize: 16,
@@ -474,7 +573,7 @@ const dayPickerStyles = StyleSheet.create({
   dayText: {
     fontSize: 14,
     fontWeight: "600",
-    fontFamily: "sans-serif", // Cambiamos aquí también
+    fontFamily: "sans-serif",
     color: "#4A4A4A",
   },
   dateText: {
@@ -485,7 +584,7 @@ const dayPickerStyles = StyleSheet.create({
   },
   selectedDayText: {
     color: "#FFFFFF",
-    fontFamily: "sans-serif", // Fuente predeterminada
+    fontFamily: "sans-serif",
   },
   selectedDayTextNight: {
     color: "#000000",
@@ -506,109 +605,165 @@ const styles = StyleSheet.create({
   containerDay: {
     flex: 1,
     backgroundColor: "#F4F4F4",
-    paddingTop: 20, 
-    paddingHorizontal: 8, 
+    paddingTop: 20,
+    paddingHorizontal: 16,
   },
   containerNight: {
     flex: 1,
     backgroundColor: "#1A1A2E",
-    paddingTop: 20, 
-    paddingHorizontal: 8, 
+    paddingTop: 20,
+    paddingHorizontal: 16,
   },
   headerDiv: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8, 
+    marginBottom: 16,
+  },
+  profileHeaderContainer: {
+    flexDirection: "row", // Alineación horizontal
+    alignItems: "center", // Alineación vertical centrada
+    justifyContent: "flex-start", // Alineación a la izquierda
+    marginBottom: 16, // Espacio entre el contenedor y el resto de la vista
+  },
+  avatar: {
+    width: 80, // Tamaño de la imagen
+    height: 80,
+    borderRadius: 50, // Círculo perfecto
+    borderWidth: 2, // Borde más delgado
+    borderColor: "#00ACC1", // Color del borde para destacar
+    marginRight: -20, // Ajuste de espacio horizontal
+    marginBottom: 20, // Incrementamos el margen inferior para bajar la imagen
+    marginTop: 20, // Añadimos margen superior para ajustar la posición hacia abajo
+    shadowColor: "#000", // Sombra para dar profundidad
+    shadowOffset: { width: 0, height: 4 }, // Desplazamiento de la sombra
+    shadowOpacity: 0.3, // Opacidad de la sombra
+    shadowRadius: 6, // Radio de la sombra
+    elevation: 10, // Altura para la sombra en Android
+},
+
+  animation: {
+    width: 90, // Ajustamos el tamaño de la animación
+    height: 90,
+    position: 'absolute', // Para mover la animación libremente en la vista
+    top: -50, // Mover más arriba con un valor negativo
+    right: 20, // Mover hacia la derecha
+  },
+
+  animationTitleContainer: {
+    flexDirection: "row", // Alinea horizontalmente el título y la animación
+    alignItems: "center", // Centra verticalmente
+  },
+  greetingContainer: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    marginTop: -20, // Subir el contenedor de saludo y nombre
+  },
+
+  greetingText: {
+    fontSize: 22, // Tamaño de la fuente para el saludo
+    fontWeight: "600",
+    color: "#333",
+    fontFamily: "HelveticaNeue-Bold",
+    position: 'relative', 
+    top: -7, // Subir el saludo 20 unidades hacia arriba
+  },
+
+  usernameText: {
+    fontSize: 24, // Tamaño de la fuente para el nombre
+    fontWeight: "700",
+    color: "#00796B",
+    fontFamily: "HelveticaNeue-Bold",
+    position: 'relative',
+    top: -25, // Subir el nombre 25 unidades hacia arriba
   },
   appTitleDay: {
     color: "#00796B",
-    fontSize: 24, // Mejoramos el tamaño de la fuente
+    fontSize: 26, // Título más grande
     fontWeight: "700",
-    fontFamily: "HelveticaNeue-Medium", // Cambiamos la fuente para mejorar legibilidad
+    fontFamily: "HelveticaNeue-Medium",
   },
   appTitleNight: {
     color: "#BB86FC",
-    fontSize: 24, 
+    fontSize: 26,
     fontWeight: "700",
-    fontFamily: "HelveticaNeue-Medium", 
+    fontFamily: "HelveticaNeue-Medium",
   },
   iconButton: {
     backgroundColor: "#E0E0E0",
     borderRadius: 20,
-    padding: 3, 
+    padding: 3,
   },
   content: {
     flex: 1,
   },
   sectionTitleDay: {
     color: "#424242",
-    fontSize: 18, 
+    fontSize: 18,
     fontWeight: "600",
-    fontFamily: "HelveticaNeue-Light", // Nueva tipografía para subtítulos
-    marginBottom: 8, 
+    fontFamily: "HelveticaNeue-Light",
+    marginBottom: 8,
   },
   sectionTitleNight: {
     color: "#FFFFFF",
-    fontSize: 18, 
+    fontSize: 18,
     fontWeight: "600",
-    fontFamily: "HelveticaNeue-Light", 
-    marginBottom: 8, 
+    fontFamily: "HelveticaNeue-Light",
+    marginBottom: 8,
   },
   reminderList: {
-    marginTop: 8, 
+    marginTop: 8,
   },
-  // Tarjeta de recordatorio compacta
   reminderCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    paddingVertical: 10, 
-    paddingHorizontal: 12, 
-    marginVertical: 8, 
-    borderRadius: 8, 
-    elevation: 1, 
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginVertical: 8,
+    borderRadius: 8,
+    elevation: 1,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 }, 
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4, 
+    shadowRadius: 4,
   },
   iconContainer: {
-    backgroundColor: "#FFB300", 
-    padding: 8, 
-    borderRadius: 20, 
+    backgroundColor: "#FFB300",
+    padding: 8,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10, 
+    marginRight: 10,
   },
   reminderDetails: {
     flex: 1,
   },
   reminderTitle: {
-    fontSize: 16, // Mejora en el tamaño del texto del título
+    fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    fontFamily: "HelveticaNeue-Bold", // Usamos una tipografía más moderna y legible
+    fontFamily: "HelveticaNeue-Bold",
   },
   reminderSubtitle: {
-    fontSize: 13, // Ajuste de la fuente del subtítulo
+    fontSize: 13,
     color: "#666",
-    marginTop: 2, 
-    fontFamily: "HelveticaNeue-Light", 
+    marginTop: 2,
+    fontFamily: "HelveticaNeue-Light",
   },
   timeContainer: {
-    backgroundColor: "#1976D2", 
-    borderRadius: 6, 
-    paddingHorizontal: 10, 
-    paddingVertical: 3, 
+    backgroundColor: "#1976D2",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     justifyContent: "center",
     alignItems: "center",
   },
   reminderTime: {
-    fontSize: 14, 
+    fontSize: 14,
     color: "#fff",
     fontWeight: "bold",
-    fontFamily: "HelveticaNeue-Bold", // Nueva fuente para la hora
+    fontFamily: "HelveticaNeue-Bold",
   },
   noRemindersAnimation: {
     justifyContent: "center",
@@ -618,10 +773,10 @@ const styles = StyleSheet.create({
   noRemindersText: {
     color: "#9E9E9E",
     textAlign: "center",
-    marginTop: 20, 
-    fontSize: 14, 
+    marginTop: 20,
+    fontSize: 14,
     fontWeight: "500",
-    fontFamily: "HelveticaNeue-Light", 
+    fontFamily: "HelveticaNeue-Light",
   },
   floatingButton: {
     position: "absolute",
@@ -660,7 +815,7 @@ const styles = StyleSheet.create({
   navigationBarNight: {
     position: "absolute",
     bottom: 0,
-    left: 0, 
+    left: 0,
     right: 0,
     height: 50,
     backgroundColor: "#162447",
@@ -712,6 +867,5 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 });
-
 
 export default HomeScreen;
