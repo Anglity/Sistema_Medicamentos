@@ -3,7 +3,6 @@ import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Dimensions, Scro
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Text, Button, IconButton, Menu, Divider, Card } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import LottieView from 'lottie-react-native';  // Importamos Lottie
 import { db } from '../services/firebase';
 import { ref, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import moment from 'moment';
@@ -52,14 +51,14 @@ const HomeScreen = () => {
     });
   };
 
-  const getIconAnimation = (nombre) => {
+  const getIcon = (nombre) => {
     switch (nombre) {
       case 'Comprimido':
-        return require('../../assets/comprimido.png'); // Animación Lottie comprimido
+        return 'pill'; 
       case 'Cápsula':
-        return require('../../assets/capsulas.png'); // Animación Lottie cápsula
+        return 'capsule'; 
       default:
-        //return require('../../assets/default.json'); // Animación default
+        return 'pill'; 
     }
   };
 
@@ -91,6 +90,10 @@ const HomeScreen = () => {
       item: item,
       reminders: recordatorios,
     });
+  };
+
+  const navigateToProfile = () => {
+    navigation.navigate("Profile");
   };
 
   return (
@@ -128,53 +131,42 @@ const HomeScreen = () => {
       <DayPicker onDaySelect={handleDaySelect} isDayTime={isDayTime} />
 
       <ScrollView style={styles.content}>
-        <Text style={isDayTime ? styles.sectionTitleDay : styles.sectionTitleNight}>Recordatorios de Hoy</Text>
-        {loading ? (
-          <ActivityIndicator size="large" color="#05B494" />
-        ) : (
-          <View style={styles.reminderList}>
-            {recordatorios.length > 0 ? (
-              recordatorios.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => navigateToEditReminder(item)}
-                >
-                  <Card style={isDayTime ? styles.reminderCardDay : styles.reminderCardNight}>
-                    <View style={styles.reminderRow}>
-                      <View style={isDayTime ? styles.reminderIconContainerDay : styles.reminderIconContainerNight}>
-                        <LottieView 
-                          source={getIconAnimation(item.iconAction)} 
-                          autoPlay loop style={{ width: 40, height: 40 }} 
-                        />
-                      </View>
-                      <View style={styles.reminderDetails}>
-                        <Text style={isDayTime ? styles.reminderTitleDay : styles.reminderTitleNight}>{item.titulo}</Text>
-                        <Text style={isDayTime ? styles.reminderTimeTextDay : styles.reminderTimeTextNight}>Hora: {item.horario}</Text>
-                        <Text style={isDayTime ? styles.reminderDosageDay : styles.reminderDosageNight}>Dosaje: {item.dosagem}</Text>
-                        <Text style={isDayTime ? styles.reminderQuantityDay : styles.reminderQuantityNight}>Cantidad: {item.cantidadMedicamentos}</Text>
-                      </View>
-                    </View>
-                  </Card>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noRemindersAnimation}>
-                <LottieView 
-                  source={require('../../assets/empty.json')} // Animación cuando no hay recordatorios
-                  autoPlay loop 
-                  style={{ width: 200, height: 200 }} 
-                />
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
+  <Text style={isDayTime ? styles.sectionTitleDay : styles.sectionTitleNight}>Recordatorios de Hoy</Text>
+  {loading ? (
+    <ActivityIndicator size="large" color="#05B494" />
+  ) : (
+    <View style={styles.reminderList}>
+      {recordatorios.length > 0 ? (
+        recordatorios.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            onPress={() => navigateToEditReminder(item)}
+          >
+            <ReminderCard item={item} />
+          </TouchableOpacity>
+        ))
+      ) : (
+        <View style={styles.noRemindersAnimation}>
+          <MaterialCommunityIcons 
+            name="emoticon-sad-outline" 
+            size={100} 
+            color="#FFB300" 
+          />
+          <Text style={isDayTime ? styles.noRemindersText : styles.noRemindersTextNight}>
+            No hay recordatorios para hoy
+          </Text>
+        </View>
+      )}
+    </View>
+  )}
+</ScrollView>
+
 
       <BottomNavigationBar 
         isDayTime={isDayTime} 
         toggleTheme={toggleTheme} 
         navigateToNewReminder={navigateToNewReminder} 
-        
+        navigateToProfile={navigateToProfile}
       />
     </View>
   );
@@ -239,6 +231,8 @@ const DayPicker = ({ onDaySelect, isDayTime }) => {
       updateDaysInWeek(1);
     }
   };
+
+  
 
   const handlePrevWeek = () => {
     const firstDayOfCurrentWeek = new Date(selectedYear, selectedMonth, daysInWeek[0]);
@@ -361,68 +355,95 @@ const BottomNavigationBar = ({ isDayTime, toggleTheme, navigateToNewReminder, na
   );
 };
 
+const ReminderCard = ({ item }) => {
+  return (
+    <View style={styles.reminderCard}>
+      <View style={styles.iconContainer}>
+        <MaterialCommunityIcons 
+          name={item.iconAction === 'Cápsula' ? 'capsule' : 'pill'} 
+          size={24} 
+          color="#fff" 
+        />
+      </View>
+      <View style={styles.reminderDetails}>
+        <Text style={styles.reminderTitle}>{item.titulo}</Text>
+        <Text style={styles.reminderSubtitle}>{item.cantidadMedicamentos} {item.iconAction}, {item.dosagem}</Text>
+      </View>
+      <View style={styles.timeContainer}>
+        <Text style={styles.reminderTime}>{item.horario}</Text>
+      </View>
+    </View>
+  );
+};
+
 const dayPickerStyles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    padding: 8,
-    borderRadius: 12,
+    backgroundColor: "#FAFAFA",
+    padding: 10,
+    borderRadius: 15,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 4,
-    marginBottom: 15,
+    marginBottom: 12,
   },
   containerNight: {
-    backgroundColor: "#2C2C2C",
-    padding: 8,
-    borderRadius: 12,
+    backgroundColor: "#333344",
+    padding: 10,
+    borderRadius: 15,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
     elevation: 4,
-    marginBottom: 15,
+    marginBottom: 12,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   headerText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#4A4A4A",
+    fontFamily: "sans-serif", // Usamos una fuente predeterminada
   },
   headerTextNight: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: "#FFFFFF",
+    fontFamily: "sans-serif",
   },
   monthButton: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderColor: "#DADADA",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#FFFFFF",
   },
   monthButtonNight: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#555555",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderColor: "#666666",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#444455",
   },
   monthButtonText: {
-    color: "#333",
-    fontSize: 14,
+    color: "#4A4A4A",
+    fontSize: 15,
     fontWeight: "600",
+    fontFamily: "sans-serif",
   },
   monthButtonTextNight: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
+    fontFamily: "sans-serif",
   },
   navigationButtons: {
     flexDirection: "row",
@@ -437,209 +458,170 @@ const dayPickerStyles = StyleSheet.create({
   dayButton: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 5,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 7,
+    borderRadius: 10,
+    backgroundColor: "#F5F5F5",
   },
   selectedDayButton: {
-    backgroundColor: "#4CAF50",
-    borderRadius: 8,
+    backgroundColor: "#5CDB95",
+    borderRadius: 10,
   },
   selectedDayButtonNight: {
-    backgroundColor: "#FF4081",
-    borderRadius: 8,
+    backgroundColor: "#FF6F61",
+    borderRadius: 10,
   },
   dayText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
+    fontFamily: "sans-serif", // Cambiamos aquí también
+    color: "#4A4A4A",
   },
   dateText: {
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 2,
+    color: "#757575",
+    fontFamily: "sans-serif",
   },
   selectedDayText: {
     color: "#FFFFFF",
+    fontFamily: "sans-serif", // Fuente predeterminada
   },
   selectedDayTextNight: {
     color: "#000000",
+    fontFamily: "sans-serif",
   },
   defaultDayText: {
-    color: "#333333",
+    color: "#4A4A4A",
+    fontFamily: "sans-serif",
   },
   defaultDayTextNight: {
     color: "#CCCCCC",
+    fontFamily: "sans-serif",
   },
 });
+
 
 const styles = StyleSheet.create({
   containerDay: {
     flex: 1,
     backgroundColor: "#F4F4F4",
-    paddingTop: 30,
-    paddingHorizontal: 10,
+    paddingTop: 20, 
+    paddingHorizontal: 8, 
   },
   containerNight: {
     flex: 1,
     backgroundColor: "#1A1A2E",
-    paddingTop: 30,
-    paddingHorizontal: 10,
+    paddingTop: 20, 
+    paddingHorizontal: 8, 
   },
   headerDiv: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8, 
   },
   appTitleDay: {
     color: "#00796B",
-    fontSize: 26,
+    fontSize: 24, // Mejoramos el tamaño de la fuente
     fontWeight: "700",
+    fontFamily: "HelveticaNeue-Medium", // Cambiamos la fuente para mejorar legibilidad
   },
   appTitleNight: {
     color: "#BB86FC",
-    fontSize: 26,
+    fontSize: 24, 
     fontWeight: "700",
+    fontFamily: "HelveticaNeue-Medium", 
   },
   iconButton: {
     backgroundColor: "#E0E0E0",
     borderRadius: 20,
-    padding: 5,
+    padding: 3, 
   },
   content: {
     flex: 1,
   },
   sectionTitleDay: {
     color: "#424242",
-    fontSize: 22,
+    fontSize: 18, 
     fontWeight: "600",
-    marginBottom: 10,
+    fontFamily: "HelveticaNeue-Light", // Nueva tipografía para subtítulos
+    marginBottom: 8, 
   },
   sectionTitleNight: {
     color: "#FFFFFF",
-    fontSize: 22,
+    fontSize: 18, 
     fontWeight: "600",
-    marginBottom: 10,
+    fontFamily: "HelveticaNeue-Light", 
+    marginBottom: 8, 
   },
   reminderList: {
-    marginTop: 10,
+    marginTop: 8, 
   },
-  reminderCardDay: {
-    borderRadius: 10,
-    marginBottom: 12,
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    shadowColor: "rgba(0, 0, 0, 0.1)",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-    borderColor: "#E0E0E0",
-    borderWidth: 1,
-  },
-  reminderCardNight: {
-    borderRadius: 10,
-    marginBottom: 12,
-    backgroundColor: "#2C2C2C",
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    shadowColor: "rgba(0, 0, 0, 0.5)",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 3,
-    borderColor: "#FF4081",
-    borderWidth: 1,
-  },
-  reminderRow: {
+  // Tarjeta de recordatorio compacta
+  reminderCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    backgroundColor: "#fff",
+    paddingVertical: 10, 
+    paddingHorizontal: 12, 
+    marginVertical: 8, 
+    borderRadius: 8, 
+    elevation: 1, 
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 }, 
+    shadowOpacity: 0.1,
+    shadowRadius: 4, 
   },
-  reminderIconContainerDay: {
-    backgroundColor: "#03DAC6",
-    borderRadius: 25,
-    padding: 10,
-  },
-  reminderIconContainerNight: {
-    backgroundColor: "#BB86FC",
-    borderRadius: 25,
-    padding: 10,
+  iconContainer: {
+    backgroundColor: "#FFB300", 
+    padding: 8, 
+    borderRadius: 20, 
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10, 
   },
   reminderDetails: {
     flex: 1,
-    marginLeft: 10,
   },
-  reminderTitleDay: {
-    color: "#212121",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 2,
+  reminderTitle: {
+    fontSize: 16, // Mejora en el tamaño del texto del título
+    fontWeight: "bold",
+    color: "#333",
+    fontFamily: "HelveticaNeue-Bold", // Usamos una tipografía más moderna y legible
   },
-  reminderTitleNight: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 2,
+  reminderSubtitle: {
+    fontSize: 13, // Ajuste de la fuente del subtítulo
+    color: "#666",
+    marginTop: 2, 
+    fontFamily: "HelveticaNeue-Light", 
   },
-  reminderInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 2,
+  timeContainer: {
+    backgroundColor: "#1976D2", 
+    borderRadius: 6, 
+    paddingHorizontal: 10, 
+    paddingVertical: 3, 
+    justifyContent: "center",
+    alignItems: "center",
   },
-  reminderTimeTextDay: {
-    color: "#757575",
-    fontSize: 14,
-    fontWeight: "500",
+  reminderTime: {
+    fontSize: 14, 
+    color: "#fff",
+    fontWeight: "bold",
+    fontFamily: "HelveticaNeue-Bold", // Nueva fuente para la hora
   },
-  reminderTimeTextNight: {
-    color: "#E0E0E0",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  reminderDosageDay: {
-    color: "#00796B",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  reminderDosageNight: {
-    color: "#BB86FC",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  reminderQuantityDay: {
-    color: "#00796B",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  reminderQuantityNight: {
-    color: "#BB86FC",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  statusLabelDay: {
-    backgroundColor: "#D1C4E9",
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: "flex-start",
-    marginTop: 5,
-  },
-  statusLabelNight: {
-    backgroundColor: "#6200EA",
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: "flex-start",
-    marginTop: 5,
+  noRemindersAnimation: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
   },
   noRemindersText: {
     color: "#9E9E9E",
     textAlign: "center",
-    marginTop: 40,
-    fontSize: 16,
+    marginTop: 20, 
+    fontSize: 14, 
     fontWeight: "500",
+    fontFamily: "HelveticaNeue-Light", 
   },
   floatingButton: {
     position: "absolute",
@@ -730,4 +712,6 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 });
+
+
 export default HomeScreen;
