@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, View, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { TextInput, RadioButton, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "firebase/auth";
+import { FontAwesome5, Feather, MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get("window");
+const SESSION_DURATION = 2 * 24 * 60 * 60 * 1000; // 2 días en milisegundos
 
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
@@ -15,130 +17,136 @@ const LoginScreen = () => {
   const [error, setError] = useState("");
 
   const navigation = useNavigation();
+  const auth = getAuth();
 
-  const navigateToRegister = () => {
-    navigation.navigate("Register");
-  };
+  // Manejar el cambio en los inputs
+  const handleInputChange = (setter) => (value) => setter(value);
 
-  const navigateToLoginOrRegister = () => {
-    navigation.navigate("LoginOrRegisterScreen");
-  };
-
-  async function loginUser() {
+  // Manejar el login del usuario
+  const handleLogin = async () => {
     setError("");
 
-    try {
-      const auth = getAuth();
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      if (user.emailVerified) {
-        // Limpiar los campos de entrada
-        setEmail("");
-        setPassword("");
-        navigation.navigate("Home");
-      } else {
-        Alert.alert(
-          "Correo No Verificado",
-          "Tu correo electrónico no ha sido verificado. Por favor, revisa tu bandeja de entrada y sigue las instrucciones para verificar tu correo.",
-          [{ text: "OK" }]
-        );
-        auth.signOut(); // Opcional: Cerrar sesión automáticamente si el correo no está verificado
-      }
-    } catch (error) {
-      handleAuthError(error);
-    }
-  }
-
-  async function resetPassword() {
-    if (!email) {
-      Alert.alert(
-        "Correo electrónico requerido",
-        "Por favor, ingresa tu correo electrónico para restablecer tu contraseña.",
-        [{ text: "OK" }]
-      );
+    if (!email || !password) {
+      showAlert("Campos requeridos", "Por favor, completa todos los campos.");
       return;
     }
 
     try {
-      const auth = getAuth();
-      await sendPasswordResetEmail(auth, email);
-      Alert.alert(
-        "Correo enviado",
-        "Te hemos enviado un correo electrónico con un enlace para restablecer tu contraseña.",
-        [{ text: "OK" }]
-      );
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const { user } = userCredential;
+
+      if (user.emailVerified) {
+        // Almacenar el tiempo de inicio de sesión en AsyncStorage
+        const currentTime = new Date().getTime();
+        await AsyncStorage.setItem('lastLoginTime', currentTime.toString());
+
+        resetFields();
+        navigation.navigate("Home"); // Redirigir a la pantalla principal
+      } else {
+        showAlert("Correo No Verificado", "Revisa tu correo para verificar tu cuenta.");
+        auth.signOut(); // Cerrar sesión si el correo no está verificado
+      }
     } catch (error) {
       handleAuthError(error);
     }
-  }
+  };
 
-  function handleAuthError(error) {
-    let errorMessage = "";
-    switch (error.code) {
-      case "auth/invalid-email":
-        errorMessage = "El correo electrónico ingresado no es válido.";
-        break;
-      case "auth/user-disabled":
-        errorMessage = "Esta cuenta ha sido deshabilitada.";
-        break;
-      case "auth/user-not-found":
-        errorMessage = "No se encontró ninguna cuenta con este correo electrónico.";
-        break;
-      case "auth/wrong-password":
-        errorMessage = "La contraseña ingresada es incorrecta.";
-        break;
-      default:
-        errorMessage = "Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.";
+  // Función para manejar el restablecimiento de contraseña
+  const resetPassword = async () => {
+    if (!email) {
+      showAlert("Correo requerido", "Por favor, ingresa tu correo para restablecer la contraseña.");
+      return;
     }
-    Alert.alert("Error de autenticación", errorMessage, [{ text: "OK" }]);
-  }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showAlert("Correo enviado", "Revisa tu correo para restablecer la contraseña.");
+    } catch (error) {
+      handleAuthError(error);
+    }
+  };
+
+  // Manejo de errores de autenticación
+  const handleAuthError = (error) => {
+    const errorMessages = {
+      "auth/invalid-email": "El correo electrónico ingresado no es válido.",
+      "auth/user-disabled": "Esta cuenta ha sido deshabilitada.",
+      "auth/user-not-found": "No se encontró ninguna cuenta con este correo.",
+      "auth/wrong-password": "La contraseña ingresada es incorrecta.",
+      "auth/too-many-requests": "Demasiados intentos fallidos. Intenta más tarde.",
+      "auth/network-request-failed": "Error de red. Verifica tu conexión.",
+    };
+    showAlert("Error de autenticación", errorMessages[error.code] || "Ha ocurrido un error. Inténtalo más tarde.");
+  };
+
+  // Mostrar alertas
+  const showAlert = (title, message) => {
+    Alert.alert(title, message, [{ text: "OK" }]);
+  };
+
+  // Limpiar campos después del login
+  const resetFields = () => {
+    setEmail("");
+    setPassword("");
+  };
+
+  // Verificar la expiración de la sesión
+  const handleSessionExpiration = async () => {
+    try {
+      const lastLoginTime = await AsyncStorage.getItem('lastLoginTime');
+      const currentTime = new Date().getTime();
+
+      if (lastLoginTime) {
+        const elapsedTime = currentTime - parseInt(lastLoginTime, 10);
+        if (elapsedTime > SESSION_DURATION) {
+          await signOut(auth);
+          showAlert("Sesión Expirada", "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+          navigation.navigate("LoginOrRegisterScreen");
+        }
+      }
+    } catch (error) {
+      console.error("Error al verificar la sesión:", error);
+    }
+  };
+
+  // Escuchar el estado de autenticación del usuario
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        handleSessionExpiration();
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <PaperProvider>
       <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={navigateToLoginOrRegister}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color="#05B494" />
         </TouchableOpacity>
-        <View style={styles.innerContainer}>
 
-          <Text style={styles.pageTitleText}>Iniciar Sesión</Text> 
-          
+        <View style={styles.innerContainer}>
+          <Text style={styles.pageTitleText}>Iniciar Sesión</Text>
           <Text style={styles.titleText}>idozer</Text>
 
           <View style={styles.form}>
-            <View style={styles.formElement}>
-              <Text style={styles.labelText}>Correo Electrónico</Text>
-              <View style={styles.inputContainer}>
-                <FontAwesome5 name="envelope" size={20} color="#05B494" style={styles.icon} />
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  placeholder="Tu correo"
-                  onChangeText={(text) => setEmail(text)}
-                  autoCapitalize="none"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formElement}>
-              <Text style={styles.labelText}>Contraseña</Text>
-              <View style={styles.inputContainer}>
-                <Feather name="lock" size={20} color="#05B494" style={styles.icon} />
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  placeholder="************"
-                  secureTextEntry
-                  onChangeText={(text) => setPassword(text)}
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
+            <FormElement
+              label="Correo Electrónico"
+              value={email}
+              placeholder="Tu correo"
+              icon={<FontAwesome5 name="envelope" size={20} color="#05B494" />}
+              onChangeText={handleInputChange(setEmail)}
+            />
+            <FormElement
+              label="Contraseña"
+              value={password}
+              placeholder="************"
+              icon={<Feather name="lock" size={20} color="#05B494" />}
+              secureTextEntry
+              onChangeText={handleInputChange(setPassword)}
+            />
 
             <View style={styles.radioContainer}>
               <View style={styles.radioGroup}>
@@ -148,27 +156,23 @@ const LoginScreen = () => {
                   onPress={() => setTerms(!terms)}
                   color="#05B494"
                 />
-                <Text style={[styles.radioText, styles.rememberMeText]}>
-                  Recordarme
-                </Text>
+                <Text style={[styles.radioText, styles.rememberMeText]}>Recordarme</Text>
               </View>
               <TouchableOpacity onPress={resetPassword}>
-                <Text style={styles.forgotPasswordText}>
-                  ¿Olvidaste tu contraseña?
-                </Text>
+                <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
               </TouchableOpacity>
             </View>
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            <TouchableOpacity style={styles.buttonRegister} onPress={loginUser}>
+            <TouchableOpacity style={styles.buttonRegister} onPress={handleLogin}>
               <MaterialIcons name="login" size={24} color="#FFFFFF" style={styles.buttonIcon} />
               <Text style={styles.buttonText}>Iniciar</Text>
             </TouchableOpacity>
 
             <View style={styles.row}>
               <Text style={styles.radioText}>¿No tienes una cuenta? </Text>
-              <TouchableOpacity onPress={navigateToRegister}>
+              <TouchableOpacity onPress={() => navigation.navigate("Register")}>
                 <Text style={styles.linkText}>Regístrate ahora</Text>
               </TouchableOpacity>
             </View>
@@ -178,6 +182,25 @@ const LoginScreen = () => {
     </PaperProvider>
   );
 };
+
+// Componente reutilizable para elementos de formulario
+const FormElement = ({ label, value, placeholder, icon, secureTextEntry, onChangeText }) => (
+  <View style={styles.formElement}>
+    <Text style={styles.labelText}>{label}</Text>
+    <View style={styles.inputContainer}>
+      {icon}
+      <TextInput
+        style={styles.input}
+        value={value}
+        placeholder={placeholder}
+        secureTextEntry={secureTextEntry}
+        onChangeText={onChangeText}
+        placeholderTextColor="#999"
+        autoCapitalize="none"
+      />
+    </View>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -227,9 +250,6 @@ const styles = StyleSheet.create({
     fontSize: width * 0.045,
     color: "#333",
     paddingLeft: 10,
-  },
-  icon: {
-    marginRight: width * 0.03,
   },
   buttonRegister: {
     flexDirection: 'row',

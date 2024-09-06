@@ -44,7 +44,15 @@ const RegisterScreen = () => {
     setPasswordStrength(calculatePasswordStrength(text));
   };
 
-  const validatePassword = () => {
+  const validateInputs = () => {
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Todos los campos son obligatorios.");
+      return false;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError("El correo electrónico no es válido.");
+      return false;
+    }
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return false;
@@ -53,13 +61,28 @@ const RegisterScreen = () => {
       setError("La contraseña debe contener al menos una letra mayúscula.");
       return false;
     }
+    if (!terms) {
+      setError("Debe aceptar los términos y condiciones.");
+      return false;
+    }
     return true;
+  };
+
+  const handleAuthError = (error) => {
+    const errorMessages = {
+      "auth/email-already-in-use": "Este correo ya está registrado.",
+      "auth/invalid-email": "El correo electrónico no es válido.",
+      "auth/operation-not-allowed": "Operación no permitida.",
+      "auth/weak-password": "La contraseña es demasiado débil.",
+      default: "Ha ocurrido un error. Inténtelo de nuevo.",
+    };
+    return errorMessages[error.code] || errorMessages.default;
   };
 
   async function registerUser() {
     setError("");
 
-    if (!validatePassword()) {
+    if (!validateInputs()) {
       return;
     }
 
@@ -88,7 +111,7 @@ const RegisterScreen = () => {
       );
 
     } catch (error) {
-      setError(error.message);
+      setError(handleAuthError(error));
     }
   }
 
