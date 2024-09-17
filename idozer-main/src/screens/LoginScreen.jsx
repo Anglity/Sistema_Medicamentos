@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { StyleSheet, View, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { TextInput, RadioButton, Provider as PaperProvider } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { FontAwesome5, Feather, MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get("window");
-const SESSION_DURATION = 2 * 24 * 60 * 60 * 1000; // 2 días en milisegundos
 
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
@@ -89,36 +88,6 @@ const LoginScreen = () => {
     setEmail("");
     setPassword("");
   };
-
-  // Verificar la expiración de la sesión
-  const handleSessionExpiration = async () => {
-    try {
-      const lastLoginTime = await AsyncStorage.getItem('lastLoginTime');
-      const currentTime = new Date().getTime();
-
-      if (lastLoginTime) {
-        const elapsedTime = currentTime - parseInt(lastLoginTime, 10);
-        if (elapsedTime > SESSION_DURATION) {
-          await signOut(auth);
-          showAlert("Sesión Expirada", "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
-          navigation.navigate("LoginOrRegisterScreen");
-        }
-      }
-    } catch (error) {
-      console.error("Error al verificar la sesión:", error);
-    }
-  };
-
-  // Escuchar el estado de autenticación del usuario
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        handleSessionExpiration();
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   return (
     <PaperProvider>
